@@ -45,8 +45,8 @@ const Header: React.FC<HeaderProps> = ({ activeSection, onNavigate }) => {
               />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-white tracking-wide">SUNRISE STORE</h1>
-              <p className="text-sm text-brand-300 font-medium">{t('footer.tagline')}</p>
+              <h1 className="text-2xl font-bold text-white tracking-wide">ONE POINT MOTORS</h1>
+              <p className="text-sm text-brand-400 font-medium">{t('footer.tagline')}</p>
             </div>
           </button>
 

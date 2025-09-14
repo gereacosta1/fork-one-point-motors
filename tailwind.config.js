@@ -5,18 +5,18 @@ export default {
     extend: {
       colors: {
         brand: {
-          DEFAULT: "#ff6b00",   // naranja principal
-          hover:   "#e85d00",   // hover
-          50:  "#fff3e8",
-          100: "#ffe7d1",
-          200: "#ffc9a3",
-          300: "#ffab75",
-          400: "#ff8d47",
-          500: "#ff6b00",
-          600: "#e85d00",
-          700: "#bf4b00",
-          800: "#963c00",
-          900: "#6e2c00",
+          DEFAULT: '#39ff14', // verde neón
+          hover:   '#20d90a', // hover
+          50:  '#ecffe6',
+          100: '#d6ffc9',
+          200: '#aaff8e',
+          300: '#7cff55',
+          400: '#53ff2c',
+          500: '#39ff14',
+          600: '#20d90a',
+          700: '#17b108',
+          800: '#118606',
+          900: '#0a5c04',
         },
       },
     },
