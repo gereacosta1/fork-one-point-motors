@@ -159,7 +159,7 @@ const es = {
   "about.stats.quality": "Garantía de Calidad",
 
   "about.trust.title": "Tu Confianza es Nuestra Prioridad",
-  "about.trust.p1": "En ONE WAY MOTORS, entendemos que comprar una motocicleta es una decisión importante. Por eso, nos comprometemos a brindarte la mejor experiencia de compra, desde la selección hasta el servicio post-venta.",
+  "about.trust.p1": "En ONE POINT MOTORS, entendemos que comprar una motocicleta es una decisión importante. Por eso, nos comprometemos a brindarte la mejor experiencia de compra, desde la selección hasta el servicio post-venta.",
   "about.trust.p2": "Nuestro equipo de expertos está capacitado para ayudarte a encontrar la moto perfecta según tus necesidades y presupuesto. Ofrecemos financiamiento flexible y garantías extendidas para tu tranquilidad.",
 
   "about.chips.quality": "Calidad Garantizada",

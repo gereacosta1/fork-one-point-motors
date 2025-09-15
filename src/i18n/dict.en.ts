@@ -164,7 +164,7 @@ const en = {
   "about.stats.quality": "Quality Guarantee",
 
   "about.trust.title": "Your Trust is Our Priority",
-  "about.trust.p1": "At ONE WAY MOTORS, we know buying a motorcycle is a big decision. That’s why we deliver the best experience, from selection to after-sales service.",
+  "about.trust.p1": "At ONE POINT MOTORS, we know buying a motorcycle is a big decision. That’s why we deliver the best experience, from selection to after-sales service.",
   "about.trust.p2": "Our expert team will help you find the perfect bike for your needs and budget. We offer flexible financing and extended warranties for peace of mind.",
 
   "about.chips.quality": "Guaranteed Quality",

@@ -8,13 +8,13 @@ const About: React.FC = () => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
   const storeImages = [
-    "/IMG/IMG-TIENDA.jpeg",
-    "/IMG/MOTOS-JUNTAS.jpeg",
-    "/IMG/IMG-TIENDA(2).webp",
-    "/IMG/MOTOS-JUNTAS (2).jpeg",
-    "/IMG/IMG-TIENDA(3).webp",
-    "/IMG/MOTOS-JUNTAS (1).jpeg",
-    "/IMG/IMG-TIENDA(2).webp",
+    "/IMG/Scooter-electrico (3).jpeg",
+  "/IMG/electricBike2.jpeg",
+  "/IMG/MOTO-TANK-200.jpeg",
+  "/IMG/MOTO-XMT-250.jpeg",
+  "/IMG/bici-electric-negra.jpeg",
+  "/IMG/ELECTRIC SCOOTER.jpeg",
+  "/IMG/scooter-azul.jpeg",
   ];
 
   const nextImage = () => setCurrentImageIndex((p) => (p + 1) % storeImages.length);
