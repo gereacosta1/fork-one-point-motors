@@ -17,7 +17,21 @@
     <div class="ok">Autorizado</div>
     <h1>Gracias, tu solicitud en Affirm fue enviada.</h1>
     <p>Podés cerrar esta ventana y volver a la tienda.</p>
-    <p><a href="/">Volver a ONE WAY MOTORS</a></p>
+    <p><a href="/">Volver a ONE POINT MOTORS</a></p>
+
+    <!-- 🔎 DEBUG checkout_token -->
+    <div id="tokenBox"></div>
+    <script>
+      const q = new URLSearchParams(location.search);
+      const tok = q.get('checkout_token');
+      if (tok) {
+        document.getElementById("tokenBox").innerHTML =
+          `<h2>checkout_token capturado:</h2>
+           <pre>${tok}</pre>
+           <p>Copialo y probalo con cURL en <code>/api/affirm-authorize</code></p>`;
+        console.log("checkout_token:", tok);
+      }
+    </script>
   </div>
 </body>
 </html>

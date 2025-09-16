@@ -207,7 +207,7 @@ export default function AffirmButton({
   const getAffirmCallbacks = (orderId: string, totalCents: number) => ({
     onSuccess: async (res: { checkout_token: string }) => {
       try {
-        const r = await fetch('/.netlify/functions/affirm-authorize', {
+         const r = await fetch('/api/affirm-authorize', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -336,10 +336,10 @@ export default function AffirmButton({
 
     const checkout = {
       merchant: {
-        user_confirmation_url: `${window.location.origin}/affirm/confirm`,
-        user_cancel_url: `${window.location.origin}/affirm/cancel`,
+         user_confirmation_url: `${window.location.origin}/affirm/confirm`,
+         user_cancel_url: `${window.location.origin}/affirm/cancel`,
         user_confirmation_url_action: 'GET',
-        name: 'SUNRISE STORE', // opcional, etiqueta visible en Affirm
+         name: 'ONE POINT MOTORS', // etiqueta visible en Affirm
       },
       billing: {
         name: { first: c.firstName, last: c.lastName },
