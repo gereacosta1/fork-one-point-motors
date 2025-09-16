@@ -25,6 +25,13 @@ const safe = (o) => {
 // ⚙️ En prod conviene capturar para que luego se “fundee”
 const CAPTURE = false;
 
+// Usa fetch nativo si existe; si no, importa node-fetch
+const doFetch = async (...args) => {
+  if (typeof fetch !== "undefined") return fetch(...args);
+  const { default: nf } = await import("node-fetch");
+  return nf(...args);
+};
+
 export async function handler(event) {
   // Preflight
   if (event.httpMethod === "OPTIONS") {
@@ -32,16 +39,20 @@ export async function handler(event) {
   }
 
   if (event.httpMethod !== "POST") {
-    return { statusCode: 405, headers: corsHeaders, body: "Method Not Allowed" };
+    return {
+      statusCode: 405,
+      headers: corsHeaders,
+      body: "Method Not Allowed",
+    };
   }
 
   try {
     const {
       checkout_token,
       order_id,
-      amount_cents,            // total en centavos (entero)
-      shipping_carrier,        // opcional
-      shipping_confirmation,   // opcional
+      amount_cents, // total en centavos (entero)
+      shipping_carrier, // opcional
+      shipping_confirmation, // opcional
     } = JSON.parse(event.body || "{}");
 
     if (!checkout_token || !order_id) {
@@ -62,10 +73,11 @@ export async function handler(event) {
       };
     }
 
-    const AUTH = "Basic " + Buffer.from(`${PUB}:${PRIV}`).toString("base64");
+    const AUTH =
+      "Basic " + Buffer.from(`${PUB}:${PRIV}`).toString("base64");
 
     // 1) Autorizar: crear el charge a partir del checkout_token
-    const authRes = await fetch(`${BASE}/charges`, {
+    const authRes = await doFetch(`${BASE}/charges`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -99,20 +111,28 @@ export async function handler(event) {
         return {
           statusCode: 400,
           headers: corsHeaders,
-          body: JSON.stringify({ error: "amount_cents required for capture=true" }),
+          body: JSON.stringify({
+            error: "amount_cents required for capture=true",
+          }),
         };
       }
 
-      const capRes = await fetch(`${BASE}/charges/${encodeURIComponent(charge.id)}/capture`, {
-        method: "POST",
-        headers: { Authorization: AUTH, "Content-Type": "application/json" },
-        body: JSON.stringify({
-          order_id,
-          amount: amount_cents,           // centavos (entero)
-          shipping_carrier,
-          shipping_confirmation,
-        }),
-      });
+      const capRes = await doFetch(
+        `${BASE}/charges/${encodeURIComponent(charge.id)}/capture`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: AUTH,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            order_id,
+            amount: amount_cents, // centavos (entero)
+            shipping_carrier,
+            shipping_confirmation,
+          }),
+        }
+      );
 
       capture = await capRes.json().catch(() => ({}));
       console.log("[capture] status=", capRes.status, " resp=", safe(capture));
