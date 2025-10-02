@@ -40,7 +40,7 @@ const Header: React.FC<HeaderProps> = ({ activeSection, onNavigate }) => {
             <div className="bg-brand-600 p-2 rounded-lg">
               <img
                 src="/IMG/One_Way_Motors_Logo-1.png"  // coloca tu nuevo logo cuando lo tengas
-                alt="SUNRISE STORE"
+                alt="One Point Motors Logo"
                 className="w-10 h-10 object-contain rounded-lg"
               />
             </div>

@@ -16,7 +16,7 @@ const Hero: React.FC<HeroProps> = ({ onNavigate }) => {
         <div className="absolute inset-0 bg-gradient-to-r from-black/90 to-black/60 z-10"></div>
         <img
           src="https://images.pexels.com/photos/2116475/pexels-photo-2116475.jpeg?auto=compress&cs=tinysrgb&w=1920&h=1080"
-          alt="Motorcycle Hero"
+          alt="Electric Vehicles"
           className="w-full h-full object-cover"
         />
       </div>
@@ -34,10 +34,10 @@ const Hero: React.FC<HeroProps> = ({ onNavigate }) => {
           <p className="text-2xl md:text-3xl lg:text-4xl text-white mb-12 max-w-3xl mx-auto font-bold">
             {t('hero.subtitle')}
           </p>
-          
+
           {/* CTA Buttons */}
           <div className="flex flex-col sm:flex-row gap-6 justify-center mb-16">
-            <button 
+            <button
               onClick={() => onNavigate('catalogo')}
               className="bg-brand backdrop-blur-md border border-brand/50 text-white px-12 py-4 rounded-lg text-xl font-black hover:bg-brand-hover transition-all duration-300 flex items-center justify-center space-x-3 group transform hover:scale-105 shadow-2xl"
             >
@@ -45,7 +45,7 @@ const Hero: React.FC<HeroProps> = ({ onNavigate }) => {
               <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
             </button>
 
-            <button 
+            <button
               onClick={() => onNavigate('contacto')}
               className="border-2 border-brand/80 bg-black/30 backdrop-blur-md text-brand px-12 py-4 rounded-lg text-xl font-black hover:bg-brand-hover hover:text-white transition-all duration-300 transform hover:scale-105 shadow-2xl"
             >

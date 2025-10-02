@@ -27,6 +27,7 @@ export interface Motorcycle {
   featured?: boolean;
   description?: string;
   features?: string[];
+  gallery?: string[];
 }
 
 // Botón flotante para abrir el carrito (usa open() y cuenta total de qty)
