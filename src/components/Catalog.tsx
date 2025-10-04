@@ -143,7 +143,7 @@ const Catalog: React.FC<CatalogProps> = ({ onViewDetails }) => {
       brand: "Master Sonic",
       model: "Electric Scooter",
       year: 2025,
-      price: 1850,
+      price: 1750,
       image: "/IMG/ELECTRIC SCOOTER.jpeg",
       condition: "Nueva",
       engine: "Electric",
