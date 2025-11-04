@@ -31,7 +31,7 @@ type Props = {
   totalUSD?: number;
   shippingUSD?: number;
   taxUSD?: number;
-  customer?: Customer;
+  customer?: Customer; // si viene desde afuera, se usa; si no, pedimos con el mini-form
 };
 
 const MIN_TOTAL_CENTS = 5000; // $50 mínimo
@@ -119,6 +119,24 @@ function NiceModal({
   );
 }
 
+/* ---------- Tipos/estado para cliente mínimo ---------- */
+type MinimalCustomer = {
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  address: {
+    line1: string;
+    line2?: string;
+    city: string;
+    state: string;
+    zip: string;
+    country?: string;
+  };
+};
+
+const CX_STORAGE = 'opm_customer_v1';
+
 /* ---------- Botón Affirm ---------- */
 export default function AffirmButton({
   cartItems,
@@ -149,6 +167,38 @@ export default function AffirmButton({
     body: string;
     retry?: boolean;
   }>({ open: false, title: '', body: '', retry: false });
+
+  const [askCxOpen, setAskCxOpen] = useState(false);
+
+  const [cx, setCx] = useState<MinimalCustomer>(() => {
+    try {
+      const raw = localStorage.getItem(CX_STORAGE);
+      if (raw) return JSON.parse(raw);
+    } catch {}
+    return {
+      firstName: '',
+      lastName: '',
+      email: '',
+      phone: '',
+      address: { line1: '', city: '', state: '', zip: '', country: 'US' },
+    };
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(CX_STORAGE, JSON.stringify(cx));
+    } catch {}
+  }, [cx]);
+
+  const hasMinimalCx =
+    cx.firstName.trim() &&
+    cx.lastName.trim() &&
+    cx.email.trim() &&
+    cx.phone.trim() &&
+    cx.address.line1.trim() &&
+    cx.address.city.trim() &&
+    cx.address.state.trim() &&
+    cx.address.zip.trim();
 
   const [lastCheckoutPayload, setLastCheckoutPayload] = useState<any>(null);
 
@@ -207,7 +257,7 @@ export default function AffirmButton({
   const getAffirmCallbacks = (orderId: string, totalCents: number) => ({
     onSuccess: async (res: { checkout_token: string }) => {
       try {
-         const r = await fetch('/api/affirm-authorize', {
+        const r = await fetch('/api/affirm-authorize', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -316,30 +366,31 @@ export default function AffirmButton({
       return;
     }
 
-    // 3) Datos de cliente (fallback)
-    const fallbackCustomer: Customer = {
-      firstName: 'John',
-      lastName: 'Doe',
-      email: 'onewaymotors2@gmail.com',
-      phone: '17862530995',
-      address: {
-        line1: '297 NW 54th St',
-        city: 'Miami',
-        state: 'FL',
-        zip: '33127',
-        country: 'USA',
-      },
-    };
-    const c = customer || fallbackCustomer;
+    // 3) Datos de cliente (obligatorios). Si no hay "customer" prop, usamos lo guardado/ingresado (cx).
+    const base = customer ?? (cx as unknown as Customer);
+    if (
+      !base?.firstName?.trim() ||
+      !base?.lastName?.trim() ||
+      !base?.email?.trim() ||
+      !base?.phone?.trim() ||
+      !base?.address?.line1?.trim() ||
+      !base?.address?.city?.trim() ||
+      !base?.address?.state?.trim() ||
+      !base?.address?.zip?.trim()
+    ) {
+      setAskCxOpen(true);
+      return; // Pedimos datos y reintentamos
+    }
+    const c = base;
 
     const orderId = 'ORDER-' + Date.now();
 
     const checkout = {
       merchant: {
-         user_confirmation_url: `${window.location.origin}/affirm/confirm`,
-         user_cancel_url: `${window.location.origin}/affirm/cancel`,
+        user_confirmation_url: `${window.location.origin}/affirm/confirm`,
+        user_cancel_url: `${window.location.origin}/affirm/cancel`,
         user_confirmation_url_action: 'GET',
-         name: 'ONE POINT MOTORS', // etiqueta visible en Affirm
+        name: 'ONE POINT MOTORS',
       },
       billing: {
         name: { first: c.firstName, last: c.lastName },
@@ -349,8 +400,10 @@ export default function AffirmButton({
           city: c.address.city,
           state: c.address.state,
           zipcode: c.address.zip,
-          country: (c.address.country || 'US' ) as 'US',
+          country: (c.address.country || 'US') as 'US',
         },
+        email: c.email,
+        phone_number: c.phone,
       },
       shipping: {
         name: { first: c.firstName, last: c.lastName },
@@ -360,8 +413,10 @@ export default function AffirmButton({
           city: c.address.city,
           state: c.address.state,
           zipcode: c.address.zip,
-          country: (c.address.country || 'US' ) as 'US',
+          country: (c.address.country || 'US') as 'US',
         },
+        email: c.email,
+        phone_number: c.phone,
       },
       customer: { email: c.email, phone_number: c.phone },
       items,
@@ -430,6 +485,70 @@ export default function AffirmButton({
     );
   }
 
+  const CxForm = (
+    <div className="space-y-3">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <input
+          className="border rounded-lg px-3 py-2"
+          placeholder="First name"
+          value={cx.firstName}
+          onChange={e => setCx({ ...cx, firstName: e.target.value })}
+        />
+        <input
+          className="border rounded-lg px-3 py-2"
+          placeholder="Last name"
+          value={cx.lastName}
+          onChange={e => setCx({ ...cx, lastName: e.target.value })}
+        />
+        <input
+          className="border rounded-lg px-3 py-2"
+          placeholder="Email"
+          type="email"
+          value={cx.email}
+          onChange={e => setCx({ ...cx, email: e.target.value })}
+        />
+        <input
+          className="border rounded-lg px-3 py-2"
+          placeholder="Phone"
+          value={cx.phone}
+          onChange={e => setCx({ ...cx, phone: e.target.value })}
+        />
+        <input
+          className="border rounded-lg px-3 py-2 md:col-span-2"
+          placeholder="Address line"
+          value={cx.address.line1}
+          onChange={e => setCx({ ...cx, address: { ...cx.address, line1: e.target.value } })}
+        />
+        <input
+          className="border rounded-lg px-3 py-2"
+          placeholder="City"
+          value={cx.address.city}
+          onChange={e => setCx({ ...cx, address: { ...cx.address, city: e.target.value } })}
+        />
+        <input
+          className="border rounded-lg px-3 py-2"
+          placeholder="State"
+          value={cx.address.state}
+          onChange={e => setCx({ ...cx, address: { ...cx.address, state: e.target.value } })}
+        />
+        <input
+          className="border rounded-lg px-3 py-2"
+          placeholder="ZIP"
+          value={cx.address.zip}
+          onChange={e => setCx({ ...cx, address: { ...cx.address, zip: e.target.value } })}
+        />
+        <input
+          className="border rounded-lg px-3 py-2"
+          placeholder="Country (US)"
+          value={cx.address.country || 'US'}
+          onChange={e =>
+            setCx({ ...cx, address: { ...cx.address, country: e.target.value } })
+          }
+        />
+      </div>
+    </div>
+  );
+
   return (
     <>
       <button
@@ -460,6 +579,23 @@ export default function AffirmButton({
         onPrimary={modal.retry ? handleRetry : undefined}
       >
         {modal.body}
+      </NiceModal>
+
+      {/* Modal para capturar datos mínimos del cliente */}
+      <NiceModal
+        open={askCxOpen}
+        title="Tus datos para Affirm"
+        onClose={() => setAskCxOpen(false)}
+        secondaryLabel="Cerrar"
+        primaryLabel="Continuar"
+        onPrimary={() => {
+          if (!hasMinimalCx) return showToast('error', 'Completá los datos mínimos.');
+          setAskCxOpen(false);
+          // reintentar con los datos ya cargados
+          setTimeout(handleClick, 0);
+        }}
+      >
+        {CxForm}
       </NiceModal>
     </>
   );

@@ -2,8 +2,9 @@
 import React from 'react';
 import { X, Trash2, Plus, Minus } from 'lucide-react';
 import { useCart } from '../context/CartContext';
-import AffirmButton from './AffirmButton';
 import { useI18n } from '../i18n/I18nProvider';
+import PayWithAffirm from './PayWithAffirm';
+
 
 const CartDrawer: React.FC = () => {
   const { t, fmtMoney } = useI18n();
@@ -103,47 +104,28 @@ const CartDrawer: React.FC = () => {
           )}
         </div>
 
-        {/* footer */}
-        <div className="p-4 border-t border-white/10 space-y-3">
-          <div className="flex items-center justify-between">
-            <span className="text-white/80">{t('cart.total')}</span>
-            <span className="text-xl font-black">{fmtMoney(Number(totalUSD) || 0)}</span>
-          </div>
+          {/* footer */}
+          <div className="p-4 border-t border-white/10 space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-white/80">{t('cart.total')}</span>
+              <span className="text-xl font-black">{fmtMoney(Number(totalUSD) || 0)}</span>
+            </div>
 
-          <div className="flex gap-2">
-            <button
-              onClick={clear}
-              disabled={items.length === 0}
-              className="flex-1 bg-white/10 hover:bg-white/20 text-white px-4 py-3 rounded-lg font-bold disabled:opacity-50"
-            >
-              {t('cart.clear')}
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={clear}
+                disabled={items.length === 0}
+                className="flex-1 bg-white/10 hover:bg-white/20 text-white px-4 py-3 rounded-lg font-bold disabled:opacity-50"
+              >
+                {t('cart.clear')}
+              </button>
 
-            {/* Affirm para TODO el carrito */}
-            <div className="flex-1">
-              {items.length > 0 && (Number(totalUSD) || 0) > 0 ? (
-                <AffirmButton
-                  cartItems={items.map(it => ({
-                    name: it.name,
-                    price: Number(it.price),
-                    qty: Number(it.qty),
-                    sku: String(it.sku || it.id),
-                    url: String(it.url || currentUrl),
-                    image: it.image,
-                  }))}
-                  totalUSD={Number(totalUSD)}
-                />
-              ) : (
-                <button
-                  disabled
-                  className="w-full bg-white/10 text-white px-4 py-3 rounded-lg font-bold opacity-50 cursor-not-allowed"
-                >
-                  {t('cart.payWithAffirm')}
-                </button>
-              )}
+              <div className="flex-1">
+                <PayWithAffirm />
+              </div>
             </div>
           </div>
-        </div>
+
       </aside>
     </div>
   );
