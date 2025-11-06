@@ -3,7 +3,7 @@ import React, { createContext, useContext, useMemo, useState } from 'react';
 export type CartItem = {
   id: string;
   name: string;
-  price: number;   // en USD
+  price: number; // USD
   qty: number;
   sku?: string;
   image?: string;
@@ -41,10 +41,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsOpen(true);
   };
 
-  const removeItem = (id: string) => {
-    setItems(prev => prev.filter(p => p.id !== id));
-  };
-
+  const removeItem = (id: string) => setItems(prev => prev.filter(p => p.id !== id));
   const setQty = (id: string, qty: number) => {
     if (qty <= 0) return removeItem(id);
     setItems(prev => prev.map(p => (p.id === id ? { ...p, qty } : p)));
@@ -55,12 +52,11 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const close = () => setIsOpen(false);
 
   const totalUSD = useMemo(
-    () => items.reduce((sum, it) => sum + it.price * it.qty, 0),
+    () => items.reduce((sum, it) => sum + Number(it.price || 0) * Number(it.qty || 0), 0),
     [items]
   );
 
   const value: CartContextType = { items, addItem, removeItem, setQty, clear, open, close, isOpen, totalUSD };
-
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
 };
 

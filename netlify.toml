@@ -8,9 +8,10 @@
   external_node_modules = ["node-fetch"]
 
 [[redirects]]
-  from = "/api/affirm-authorize"
-  to = "/.netlify/functions/affirm-authorize"
-  status = 200
+from = "/api/affirm-authorize"
+to = "/.netlify/functions/affirm-authorize"
+status = 200
+
 
 [[redirects]]
   from = "/*"

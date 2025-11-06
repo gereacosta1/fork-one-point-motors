@@ -8,7 +8,7 @@ declare global {
 
 /**
  * Carga Affirm **siempre en producción**.
- * (Usamos el CDN de prod para evitar errores de clave pública inválida).
+ * (Forzamos el CDN de prod para evitar errores de clave pública inválida).
  */
 export function loadAffirm(publicKey: string): Promise<void> {
   return new Promise<void>((resolve, reject) => {
@@ -23,9 +23,9 @@ export function loadAffirm(publicKey: string): Promise<void> {
 
     // Elimina scripts previos de Affirm que no coincidan
     const existing = document.querySelectorAll<HTMLScriptElement>(
-      'script[src*="affirm.com/js/v2/affirm.js"]'
+      'script[src*="affirm.com/js/v2/affirm.js"]',
     );
-    existing.forEach(s => {
+    existing.forEach((s) => {
       if (s.src !== scriptUrl) s.remove();
     });
 

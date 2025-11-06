@@ -11,27 +11,11 @@ type CartItem = {
   image?: string;
 };
 
-type Customer = {
-  firstName: string;
-  lastName: string;
-  email?: string;
-  phone?: string;
-  address: {
-    line1: string;
-    line2?: string;
-    city: string;
-    state: string;
-    zip: string;
-    country?: string;
-  };
-};
-
 type Props = {
   cartItems?: CartItem[];
   totalUSD?: number;
   shippingUSD?: number;
   taxUSD?: number;
-  customer?: Customer; // si viene desde afuera, se usa; si no, pedimos con el mini-form
 };
 
 const MIN_TOTAL_CENTS = 5000; // $50 mínimo
@@ -57,7 +41,7 @@ function Toast({
     type === 'success'
       ? 'bg-green-600/95 text-white border-green-400'
       : type === 'error'
-      ? 'bg-brand-600/95 text-white border-brand-400'
+      ? 'bg-red-600/95 text-white border-red-400'
       : 'bg-black/90 text-white border-white/20';
   return (
     <div className={`${base} ${palette}`} role="status" onClick={onClose}>
@@ -119,31 +103,12 @@ function NiceModal({
   );
 }
 
-/* ---------- Tipos/estado para cliente mínimo ---------- */
-type MinimalCustomer = {
-  firstName: string;
-  lastName: string;
-  email: string;
-  phone: string;
-  address: {
-    line1: string;
-    line2?: string;
-    city: string;
-    state: string;
-    zip: string;
-    country?: string;
-  };
-};
-
-const CX_STORAGE = 'opm_customer_v1';
-
-/* ---------- Botón Affirm ---------- */
+/* ---------- Botón Affirm (abre modal directo; Affirm pide nombre/apellido) ---------- */
 export default function AffirmButton({
   cartItems,
   totalUSD,
   shippingUSD = 0,
   taxUSD = 0,
-  customer,
 }: Props) {
   const PUBLIC_KEY = import.meta.env.VITE_AFFIRM_PUBLIC_KEY || '';
 
@@ -167,38 +132,6 @@ export default function AffirmButton({
     body: string;
     retry?: boolean;
   }>({ open: false, title: '', body: '', retry: false });
-
-  const [askCxOpen, setAskCxOpen] = useState(false);
-
-  const [cx, setCx] = useState<MinimalCustomer>(() => {
-    try {
-      const raw = localStorage.getItem(CX_STORAGE);
-      if (raw) return JSON.parse(raw);
-    } catch {}
-    return {
-      firstName: '',
-      lastName: '',
-      email: '',
-      phone: '',
-      address: { line1: '', city: '', state: '', zip: '', country: 'US' },
-    };
-  });
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(CX_STORAGE, JSON.stringify(cx));
-    } catch {}
-  }, [cx]);
-
-  const hasMinimalCx =
-    cx.firstName.trim() &&
-    cx.lastName.trim() &&
-    cx.email.trim() &&
-    cx.phone.trim() &&
-    cx.address.line1.trim() &&
-    cx.address.city.trim() &&
-    cx.address.state.trim() &&
-    cx.address.zip.trim();
 
   const [lastCheckoutPayload, setLastCheckoutPayload] = useState<any>(null);
 
@@ -226,6 +159,7 @@ export default function AffirmButton({
     loadAffirm(PUBLIC_KEY).then(() => setReady(true)).catch(console.error);
   }, [PUBLIC_KEY]);
 
+  // Normaliza items → payload Affirm (sin datos de buyer; Affirm los pedirá)
   const normalizeItems = (itemsIn?: CartItem[]): any[] => {
     if (!itemsIn?.length) {
       return [
@@ -249,7 +183,7 @@ export default function AffirmButton({
         unit_price,
         qty,
         item_url: it.url || window.location.href,
-        item_image_url: it.image,
+        image_url: it.image, // nombre correcto para Affirm
       };
     });
   };
@@ -275,7 +209,8 @@ export default function AffirmButton({
         setModal({
           open: true,
           title: 'No pudimos confirmar tu solicitud',
-          body: 'Tuvimos un problema al confirmar con nuestro servidor. Intentá nuevamente en unos segundos.',
+          body:
+            'Tuvimos un problema al confirmar con nuestro servidor. Intentá nuevamente en unos segundos.',
           retry: true,
         });
       } finally {
@@ -288,7 +223,7 @@ export default function AffirmButton({
       setModal({
         open: true,
         title: 'No se completó la financiación',
-        body: 'Tu solicitud no pudo completarse. Podés intentarlo de nuevo o volver al catálogo.',
+        body: 'Tu solicitud no pudo completarse. Podés intentarlo de nuevo.',
         retry: true,
       });
     },
@@ -298,7 +233,7 @@ export default function AffirmButton({
       setModal({
         open: true,
         title: 'Datos inválidos',
-        body: 'Revisá el precio y el total del producto. Si el problema persiste, contactanos.',
+        body: 'Revisá el precio y el total del producto.',
         retry: false,
       });
     },
@@ -349,76 +284,25 @@ export default function AffirmButton({
       : sumItems + shippingCents + taxCents;
 
     if (!isFiniteNumber(totalCents) || totalCents < MIN_TOTAL_CENTS) {
-      console.warn('Total inválido para Affirm:', {
-        totalCents,
-        totalUSD,
-        sumItems,
-        shippingCents,
-        taxCents,
-        items,
-      });
       setModal({
         open: true,
         title: 'Importe no disponible para financiación',
-        body: 'El total es demasiado bajo para Affirm. Elegí otro producto o agregá más artículos.',
+        body: 'El total es demasiado bajo para Affirm.',
         retry: false,
       });
       return;
     }
 
-    // 3) Datos de cliente (obligatorios). Si no hay "customer" prop, usamos lo guardado/ingresado (cx).
-    const base = customer ?? (cx as unknown as Customer);
-    if (
-      !base?.firstName?.trim() ||
-      !base?.lastName?.trim() ||
-      !base?.email?.trim() ||
-      !base?.phone?.trim() ||
-      !base?.address?.line1?.trim() ||
-      !base?.address?.city?.trim() ||
-      !base?.address?.state?.trim() ||
-      !base?.address?.zip?.trim()
-    ) {
-      setAskCxOpen(true);
-      return; // Pedimos datos y reintentamos
-    }
-    const c = base;
-
     const orderId = 'ORDER-' + Date.now();
 
-    const checkout = {
+    // 3) Payload SIN billing/shipping/customer → Affirm pedirá nombre/apellido
+    const checkout: any = {
       merchant: {
         user_confirmation_url: `${window.location.origin}/affirm/confirm`,
         user_cancel_url: `${window.location.origin}/affirm/cancel`,
         user_confirmation_url_action: 'GET',
         name: 'ONE POINT MOTORS',
       },
-      billing: {
-        name: { first: c.firstName, last: c.lastName },
-        address: {
-          line1: c.address.line1,
-          line2: c.address.line2,
-          city: c.address.city,
-          state: c.address.state,
-          zipcode: c.address.zip,
-          country: (c.address.country || 'US') as 'US',
-        },
-        email: c.email,
-        phone_number: c.phone,
-      },
-      shipping: {
-        name: { first: c.firstName, last: c.lastName },
-        address: {
-          line1: c.address.line1,
-          line2: c.address.line2,
-          city: c.address.city,
-          state: c.address.state,
-          zipcode: c.address.zip,
-          country: (c.address.country || 'US') as 'US',
-        },
-        email: c.email,
-        phone_number: c.phone,
-      },
-      customer: { email: c.email, phone_number: c.phone },
       items,
       currency: 'USD',
       shipping_amount: shippingCents,
@@ -428,7 +312,6 @@ export default function AffirmButton({
       metadata: { mode: 'modal' },
     };
 
-    // Debug útil
     console.group('[Affirm][CHECK]');
     console.table(
       items.map((it: any) => ({
@@ -438,11 +321,9 @@ export default function AffirmButton({
         qty: it.qty,
       })),
     );
-    console.log('shipping_cents:', shippingCents, 'tax_cents:', taxCents);
-    console.log('totalCents →', totalCents);
+    console.log('shipping_cents:', shippingCents, 'tax_cents:', taxCents, 'TOTAL:', totalCents);
     console.groupEnd();
 
-    // Guardar datos por si se necesitan en /affirm/confirm
     try {
       sessionStorage.setItem('affirm_amount_cents', String(totalCents));
       sessionStorage.setItem('affirm_order_id', orderId);
@@ -473,81 +354,9 @@ export default function AffirmButton({
           message={toast.message}
           onClose={() => setToast(s => ({ ...s, show: false }))}
         />
-        <NiceModal
-          open={modal.open}
-          title={modal.title}
-          onClose={() => setModal({ open: false, title: '', body: '' })}
-          secondaryLabel="Cerrar"
-        >
-          {modal.body}
-        </NiceModal>
       </>
     );
   }
-
-  const CxForm = (
-    <div className="space-y-3">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        <input
-          className="border rounded-lg px-3 py-2"
-          placeholder="First name"
-          value={cx.firstName}
-          onChange={e => setCx({ ...cx, firstName: e.target.value })}
-        />
-        <input
-          className="border rounded-lg px-3 py-2"
-          placeholder="Last name"
-          value={cx.lastName}
-          onChange={e => setCx({ ...cx, lastName: e.target.value })}
-        />
-        <input
-          className="border rounded-lg px-3 py-2"
-          placeholder="Email"
-          type="email"
-          value={cx.email}
-          onChange={e => setCx({ ...cx, email: e.target.value })}
-        />
-        <input
-          className="border rounded-lg px-3 py-2"
-          placeholder="Phone"
-          value={cx.phone}
-          onChange={e => setCx({ ...cx, phone: e.target.value })}
-        />
-        <input
-          className="border rounded-lg px-3 py-2 md:col-span-2"
-          placeholder="Address line"
-          value={cx.address.line1}
-          onChange={e => setCx({ ...cx, address: { ...cx.address, line1: e.target.value } })}
-        />
-        <input
-          className="border rounded-lg px-3 py-2"
-          placeholder="City"
-          value={cx.address.city}
-          onChange={e => setCx({ ...cx, address: { ...cx.address, city: e.target.value } })}
-        />
-        <input
-          className="border rounded-lg px-3 py-2"
-          placeholder="State"
-          value={cx.address.state}
-          onChange={e => setCx({ ...cx, address: { ...cx.address, state: e.target.value } })}
-        />
-        <input
-          className="border rounded-lg px-3 py-2"
-          placeholder="ZIP"
-          value={cx.address.zip}
-          onChange={e => setCx({ ...cx, address: { ...cx.address, zip: e.target.value } })}
-        />
-        <input
-          className="border rounded-lg px-3 py-2"
-          placeholder="Country (US)"
-          value={cx.address.country || 'US'}
-          onChange={e =>
-            setCx({ ...cx, address: { ...cx.address, country: e.target.value } })
-          }
-        />
-      </div>
-    </div>
-  );
 
   return (
     <>
@@ -557,7 +366,7 @@ export default function AffirmButton({
         disabled={opening}
         className="bg-black text-white font-bold px-5 py-3 rounded-xl text-lg 
                border-2 border-white shadow-md 
-               hover:bg-neutral-900 hover:border-red-500 hover:scale-105 
+               hover:bg-neutral-900 hover:border-green-500 hover:scale-105 
                transition-all duration-300"
       >
         {opening ? 'Abriendo…' : 'Pay with Affirm'}
@@ -579,23 +388,6 @@ export default function AffirmButton({
         onPrimary={modal.retry ? handleRetry : undefined}
       >
         {modal.body}
-      </NiceModal>
-
-      {/* Modal para capturar datos mínimos del cliente */}
-      <NiceModal
-        open={askCxOpen}
-        title="Tus datos para Affirm"
-        onClose={() => setAskCxOpen(false)}
-        secondaryLabel="Cerrar"
-        primaryLabel="Continuar"
-        onPrimary={() => {
-          if (!hasMinimalCx) return showToast('error', 'Completá los datos mínimos.');
-          setAskCxOpen(false);
-          // reintentar con los datos ya cargados
-          setTimeout(handleClick, 0);
-        }}
-      >
-        {CxForm}
       </NiceModal>
     </>
   );
