@@ -297,20 +297,41 @@ export default function AffirmButton({
 
     // 3) Payload SIN billing/shipping/customer → Affirm pedirá nombre/apellido
     const checkout: any = {
-      merchant: {
-        user_confirmation_url: `${window.location.origin}/affirm/confirm`,
-        user_cancel_url: `${window.location.origin}/affirm/cancel`,
-        user_confirmation_url_action: 'GET',
-        name: 'ONE POINT MOTORS',
-      },
-      items,
-      currency: 'USD',
-      shipping_amount: shippingCents,
-      tax_amount: taxCents,
-      total: totalCents,
-      order_id: orderId,
-      metadata: { mode: 'modal' },
-    };
+  merchant: {
+    user_confirmation_url: `${window.location.origin}/affirm/confirm`,
+    user_cancel_url: `${window.location.origin}/affirm/cancel`,
+    user_confirmation_url_action: 'GET',
+    name: 'ONE POINT MOTORS',
+  },
+  billing: {
+    name: { first: 'Online', last: 'Customer' },
+    address: {
+      line1: '297 NW 54th St',
+      city: 'Miami',
+      state: 'FL',
+      zipcode: '33127',
+      country: 'US',
+    },
+  },
+  shipping: {
+    name: { first: 'Online', last: 'Customer' },
+    address: {
+      line1: '297 NW 54th St',
+      city: 'Miami',
+      state: 'FL',
+      zipcode: '33127',
+      country: 'US',
+    },
+  },
+  items,
+  currency: 'USD',
+  shipping_amount: shippingCents,
+  tax_amount: taxCents,
+  total: totalCents,
+  order_id: orderId,
+  metadata: { mode: 'modal' },
+};
+
 
     console.group('[Affirm][CHECK]');
     console.table(
