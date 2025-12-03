@@ -21,16 +21,20 @@ const safe = (o) => {
   }
 };
 
+function json(statusCode, obj) {
+  return {
+    statusCode,
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    body: JSON.stringify(obj),
+  };
+}
+
 export async function handler(event) {
   if (event.httpMethod === 'OPTIONS') {
     return { statusCode: 200, headers: corsHeaders, body: '' };
   }
   if (event.httpMethod !== 'POST') {
-    return {
-      statusCode: 405,
-      headers: corsHeaders,
-      body: 'Method Not Allowed',
-    };
+    return json(405, { error: 'Method Not Allowed' });
   }
 
   try {
@@ -44,7 +48,7 @@ export async function handler(event) {
     const origin =
       typeof body.origin === 'string' && body.origin.startsWith('http')
         ? body.origin
-        : 'https://onewaymotor.com';
+        : 'https://www.onepointmotors.com';
 
     if (!items.length) {
       return json(400, { error: 'items array required' });
@@ -77,7 +81,6 @@ export async function handler(event) {
 
     return json(200, { ok: true, url: session.url });
   } catch (err) {
-    // ⬇️ AHORA vemos el error real de Stripe en el frontend y en logs
     console.error('[card-checkout] error', err);
 
     const msg =
@@ -89,12 +92,4 @@ export async function handler(event) {
 
     return json(500, { error: msg, code: code || null });
   }
-}
-
-function json(statusCode, obj) {
-  return {
-    statusCode,
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    body: JSON.stringify(obj),
-  };
 }
