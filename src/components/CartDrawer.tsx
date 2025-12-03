@@ -1,8 +1,11 @@
+// src/components/CartDrawer.tsx one-point-motors
 import React from 'react';
 import { X, Trash2, Plus, Minus } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useI18n } from '../i18n/I18nProvider';
 import PayWithAffirm from './PayWithAffirm';
+import PayWithCard from "./PayWithCard";
+
 
 const CartDrawer: React.FC = () => {
   const { t, fmtMoney } = useI18n();
@@ -117,6 +120,7 @@ const CartDrawer: React.FC = () => {
             <div className="flex-1">
               {/* Botón que abre el modal oficial de Affirm */}
               <PayWithAffirm />
+              <PayWithCard />
             </div>
           </div>
         </div>
