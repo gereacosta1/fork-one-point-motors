@@ -1,4 +1,4 @@
-// netlify/functions/card-checkout.mjs
+// netlify/functions/card-checkout.mjs  (one-point-motors)
 import Stripe from 'stripe';
 
 const stripeSecret = process.env.STRIPE_SECRET_KEY || '';
@@ -38,7 +38,12 @@ export async function handler(event) {
   }
 
   try {
-    console.log('[stripe key prefix]', stripeSecret?.slice(0, 8), '...len=', stripeSecret?.length);
+    console.log(
+      '[stripe key prefix]',
+      stripeSecret?.slice(0, 8),
+      '...len=',
+      stripeSecret?.length
+    );
     if (!stripe) {
       return json(500, { error: 'Missing STRIPE_SECRET_KEY env var' });
     }
@@ -71,13 +76,16 @@ export async function handler(event) {
 
     const session = await stripe.checkout.sessions.create({
       mode: 'payment',
-      payment_method_types: ['card'],
+      payment_method_types: ['card', 'afterpay_clearpay', 'klarna', 'zip'],
       line_items,
       success_url: `${origin}/?card=success`,
       cancel_url: `${origin}/?card=cancel`,
     });
 
-    console.log('[stripe checkout session]', safe({ id: session.id, url: session.url }));
+    console.log(
+      '[stripe checkout session]',
+      safe({ id: session.id, url: session.url })
+    );
 
     return json(200, { ok: true, url: session.url });
   } catch (err) {
