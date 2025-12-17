@@ -88,13 +88,13 @@ const About: React.FC = () => {
 
           {/* Gallery (sin recorte + más grande y proporcional) */}
           <div className="relative">
-            <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-white/5 shadow-2xl">
+            <div className="relative overflow-hidden rounded-2xl border border-brand/30 bg-black/60">
               {/* Aspect ratio responsivo (no depende de h-80) */}
               <div className="relative w-full aspect-[16/10] sm:aspect-[16/9] lg:aspect-[16/10]">
                 <img
                   src={storeImages[currentImageIndex]}
                   alt={t('about.gallery.alt')}
-                  className="absolute inset-0 w-full h-full object-contain p-2 sm:p-3 transition-opacity duration-300"
+                  className="w-full h-[420px] md:h-[520px] object-contain bg-black/40 transition-transform duration-500"
                   loading="lazy"
                   draggable={false}
                 />
