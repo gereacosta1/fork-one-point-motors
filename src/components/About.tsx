@@ -1,3 +1,4 @@
+// src/components/About.tsx
 import React, { useState } from 'react';
 import { Award, Users, Clock, Wrench, ChevronLeft, ChevronRight } from 'lucide-react';
 import UnderlineGrow from "../components/UnderlineGrow";
@@ -9,12 +10,12 @@ const About: React.FC = () => {
 
   const storeImages = [
     "/IMG/Scooter-electrico (3).jpeg",
-  "/IMG/electricBike2.jpeg",
-  "/IMG/MOTO-TANK-200.jpeg",
-  "/IMG/MOTO-XMT-250.jpeg",
-  "/IMG/bici-electric-negra.jpeg",
-  "/IMG/ELECTRIC SCOOTER.jpeg",
-  "/IMG/scooter-azul.jpeg",
+    "/IMG/electricBike2.jpeg",
+    "/IMG/MOTO-TANK-200.jpeg",
+    "/IMG/MOTO-XMT-250.jpeg",
+    "/IMG/bici-electric-negra.jpeg",
+    "/IMG/ELECTRIC SCOOTER.jpeg",
+    "/IMG/scooter-azul.jpeg",
   ];
 
   const nextImage = () => setCurrentImageIndex((p) => (p + 1) % storeImages.length);
@@ -28,10 +29,10 @@ const About: React.FC = () => {
   ] as const;
 
   const services = [
-    { id: "new",   icon: "🏍️", titleKey: "about.services.new.title",   descKey: "about.services.new.desc" },
-    { id: "used",  icon: "✅", titleKey: "about.services.used.title",  descKey: "about.services.used.desc" },
-    { id: "fin",   icon: "💳", titleKey: "about.services.fin.title",   descKey: "about.services.fin.desc" },
-    { id: "tech",  icon: "🔧", titleKey: "about.services.tech.title",  descKey: "about.services.tech.desc" },
+    { id: "new",  icon: "🏍️", titleKey: "about.services.new.title",  descKey: "about.services.new.desc" },
+    { id: "used", icon: "✅", titleKey: "about.services.used.title", descKey: "about.services.used.desc" },
+    { id: "fin",  icon: "💳", titleKey: "about.services.fin.title",  descKey: "about.services.fin.desc" },
+    { id: "tech", icon: "🔧", titleKey: "about.services.tech.title", descKey: "about.services.tech.desc" },
   ] as const;
 
   return (
@@ -71,6 +72,7 @@ const About: React.FC = () => {
             <p className="text-white text-lg font-bold mb-6">
               {t('about.trust.p2')}
             </p>
+
             <div className="flex flex-wrap gap-4">
               <span className="bg-brand/90 backdrop-blur-md border border-brand/50 text-white px-6 py-3 rounded-full text-lg font-bold shadow-lg">
                 {t('about.chips.quality')}
@@ -84,42 +86,52 @@ const About: React.FC = () => {
             </div>
           </div>
 
+          {/* Gallery (sin recorte + más grande y proporcional) */}
           <div className="relative">
-            <div className="relative overflow-hidden rounded-lg">
-              <img
-                src={storeImages[currentImageIndex]}
-                alt={t('about.gallery.alt')}
-                className="w-full h-80 object-cover transition-transform duration-500"
-              />
+            <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-white/5 shadow-2xl">
+              {/* Aspect ratio responsivo (no depende de h-80) */}
+              <div className="relative w-full aspect-[16/10] sm:aspect-[16/9] lg:aspect-[16/10]">
+                <img
+                  src={storeImages[currentImageIndex]}
+                  alt={t('about.gallery.alt')}
+                  className="absolute inset-0 w-full h-full object-contain p-2 sm:p-3 transition-opacity duration-300"
+                  loading="lazy"
+                  draggable={false}
+                />
+
+                {/* Sombra suave para integrarlo al fondo */}
+                <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/35 via-transparent to-transparent" />
+              </div>
 
               {/* Navigation Buttons */}
               <button
                 onClick={prevImage}
-                className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-brand/90 backdrop-blur-md border border-brand/50 text-white p-3 rounded-full hover:bg-brand-hover transition-colors shadow-lg"
+                className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 bg-brand/90 backdrop-blur-md border border-brand/50 text-white p-2 sm:p-3 rounded-full hover:bg-brand-hover transition-colors shadow-lg"
                 aria-label={t('about.gallery.prev')}
                 title={t('about.gallery.prev')}
               >
-                <ChevronLeft className="w-6 h-6" />
+                <ChevronLeft className="w-5 h-5 sm:w-6 sm:h-6" />
               </button>
+
               <button
                 onClick={nextImage}
-                className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-brand/90 backdrop-blur-md border border-brand/50 text-white p-3 rounded-full hover:bg-brand-hover transition-colors shadow-lg"
+                className="absolute right-3 sm:right-4 top-1/2 -translate-y-1/2 bg-brand/90 backdrop-blur-md border border-brand/50 text-white p-2 sm:p-3 rounded-full hover:bg-brand-hover transition-colors shadow-lg"
                 aria-label={t('about.gallery.next')}
                 title={t('about.gallery.next')}
               >
-                <ChevronRight className="w-6 h-6" />
+                <ChevronRight className="w-5 h-5 sm:w-6 sm:h-6" />
               </button>
 
               {/* Indicators */}
-              <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-2">
+              <div className="absolute bottom-3 sm:bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2">
                 {storeImages.map((_, index) => (
                   <button
                     key={index}
                     onClick={() => setCurrentImageIndex(index)}
-                    className={`w-3 h-3 rounded-full transition-colors border ${
+                    className={`h-2.5 w-2.5 rounded-full transition-colors border ${
                       index === currentImageIndex
-                        ? 'bg-brand/90 backdrop-blur-sm border-brand'
-                        : 'bg-white/50 backdrop-blur-sm border-white/30'
+                        ? 'bg-brand/90 border-brand'
+                        : 'bg-white/40 border-white/30'
                     }`}
                     aria-label={`${t('about.gallery.seeImage')} ${index + 1}`}
                     title={`${t('about.gallery.seeImage')} ${index + 1}`}
@@ -135,6 +147,7 @@ const About: React.FC = () => {
           <h3 className="text-3xl font-black text-white text-center mb-12">
             <UnderlineGrow>{t('about.services.title')}</UnderlineGrow>
           </h3>
+
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
             {services.map((s) => {
               const serviceTitle = t(s.titleKey);
