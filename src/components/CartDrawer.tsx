@@ -1,4 +1,4 @@
-// src/components/CartDrawer.tsx one-point-motors
+// src/components/CartDrawer.tsx
 import React from 'react';
 import { X, Trash2, Plus, Minus } from 'lucide-react';
 import { useCart } from '../context/CartContext';
@@ -6,13 +6,48 @@ import { useI18n } from '../i18n/I18nProvider';
 import PayWithAffirm from './PayWithAffirm';
 import PayWithCard from "./PayWithCard";
 
+const QUICK_ITEMS = [
+  {
+    id: 'quick-ebike-black-4000',
+    name: 'E-Bike Fat Tire (Black)',
+    price: 4000,
+    image: '/IMG/onepoint-ebike-black-4000.jpeg',
+  },
+  {
+    id: 'quick-ebike-red-2800',
+    name: 'E-Bike (Red)',
+    price: 2800,
+    image: '/IMG/onepoint-ebike-red-2800.jpeg',
+  },
+  {
+    id: 'quick-scooter-rgb-500',
+    name: 'Electric Scooter (RGB)',
+    price: 500,
+    image: '/IMG/onepoint-scooter-rgb-500.jpeg',
+  },
+] as const;
 
 const CartDrawer: React.FC = () => {
   const { t, fmtMoney } = useI18n();
-  const { items, isOpen, close, removeItem, setQty, totalUSD, clear } = useCart();
+
+  // 👇 IMPORTANTE: acá asumo que tu CartContext tiene addItem()
+  const { items, isOpen, close, removeItem, setQty, totalUSD, clear, addItem } = useCart() as any;
 
   const handleDec = (id: string, qty: number) => setQty(id, Math.max(1, qty - 1));
   const handleInc = (id: string, qty: number) => setQty(id, qty + 1);
+
+  const addQuick = (q: any) => {
+    if (!addItem) return;
+
+    addItem({
+      id: q.id,
+      name: q.name,
+      price: q.price,
+      qty: 1,
+      image: q.image,
+      url: '/catalog',
+    });
+  };
 
   return (
     <div
@@ -39,11 +74,54 @@ const CartDrawer: React.FC = () => {
           </button>
         </div>
 
+        {/* content */}
         <div className="p-4 space-y-4 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 220px)' }}>
+
+          {/* ✅ QUICK ADD (aparece aunque el carrito esté vacío) */}
+          <div className="border border-white/10 rounded-xl p-3">
+            <div className="flex items-center justify-between mb-2">
+              <p className="font-black text-sm">Quick Add</p>
+              <p className="text-xs text-white/60">Tap para agregar</p>
+            </div>
+
+            <div className="flex gap-2 overflow-x-auto pb-1">
+              {QUICK_ITEMS.map(q => (
+                <button
+                  key={q.id}
+                  type="button"
+                  onClick={() => addQuick(q)}
+                  className="min-w-[160px] flex gap-2 items-center border border-white/10 rounded-lg p-2 hover:bg-white/5 transition"
+                >
+                  <img
+                    src={q.image}
+                    alt={q.name}
+                    className="w-12 h-12 rounded object-cover bg-white/5"
+                    onError={(e) => {
+                      const timg = e.currentTarget as HTMLImageElement;
+                      if (!timg.src.endsWith('/fallback.png')) timg.src = '/fallback.png';
+                    }}
+                  />
+                  <div className="text-left min-w-0">
+                    <p className="text-xs font-bold truncate">{q.name}</p>
+                    <p className="text-xs text-white/70">{fmtMoney(Number(q.price))}</p>
+                    <p className="text-[11px] text-white/50">Add to cart</p>
+                  </div>
+                </button>
+              ))}
+            </div>
+
+            {!addItem ? (
+              <p className="mt-2 text-xs text-red-400">
+                Falta addItem() en CartContext. Si querés, te lo agrego: pegame tu src/context/CartContext.tsx.
+              </p>
+            ) : null}
+          </div>
+
+          {/* LISTADO NORMAL */}
           {items.length === 0 ? (
             <p className="text-white/70">{t('cart.empty')}</p>
           ) : (
-            items.map(it => (
+            items.map((it: any) => (
               <div key={it.id} className="flex gap-3 border border-white/10 rounded-lg p-3">
                 <img
                   src={it.image || '/fallback.png'}
@@ -117,8 +195,7 @@ const CartDrawer: React.FC = () => {
               {t('cart.clear')}
             </button>
 
-            <div className="flex-1">
-              {/* Botón que abre el modal oficial de Affirm */}
+            <div className="flex-1 space-y-2">
               <PayWithAffirm />
               <PayWithCard />
             </div>

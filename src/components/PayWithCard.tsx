@@ -9,25 +9,23 @@ const PayWithCard: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
 
   const handleClick = async () => {
-    try {
-      setError(null);
+  setError(null);
 
-      if (!items.length) {
-        setError("Your cart is empty.");
-        return;
-      }
+  if (!items.length) {
+    setError("Your cart is empty.");
+    return;
+  }
 
-      setLoading(true);
-      await startCardCheckout(items);
-      // Stripe hace el redirect
-    } catch (e: any) {
-      console.error(e);
-      setError(
-        e?.message || "An error occurred while starting the payment."
-      );
-      setLoading(false);
-    }
-  };
+  setLoading(true);
+  try {
+    await startCardCheckout(items); // Stripe hace redirect si OK
+  } catch (e: any) {
+    console.error(e);
+    setError(e?.message || "An error occurred while starting the payment.");
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <div className="space-y-2">
@@ -45,7 +43,7 @@ const PayWithCard: React.FC = () => {
       <p className="text-xs text-slate-500">
         Total:{" "}
         <span className="font-semibold">
-          ${totalUSD.toFixed(2)} USD
+          ${(Number(totalUSD) || 0).toFixed(2)} USD
         </span>
       </p>
 

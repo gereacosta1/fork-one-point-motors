@@ -1,3 +1,4 @@
+// src/components/Catalog.tsx
 import React, { useState } from 'react';
 import { Heart, Eye, Fuel, Gauge, Calendar } from 'lucide-react';
 import { Motorcycle } from '../App';
@@ -104,7 +105,7 @@ const Catalog: React.FC<CatalogProps> = ({ onViewDetails }) => {
   // 👉 carrito
   const { addItem, open } = useCart();
 
-  // 🔄 Catálogo en INGLÉS + sin JBL/Neumáticos + nuevo triciclo a $5000
+  // 🔄 Catálogo en INGLÉS + sin JBL/Neumáticos + nuevo triciclo a $5000 + 3 productos nuevos (montos)
   const motorcycles: Motorcycle[] = [
     {
       id: 5001,
@@ -120,9 +121,56 @@ const Catalog: React.FC<CatalogProps> = ({ onViewDetails }) => {
       description:
         "Robust electric cargo tricycle ideal for deliveries and utility tasks. Durable chassis, large rear cargo bed, weather canopy and comfortable seating. Financing available.",
       features: ["Motor eléctrico", "Ligero y ágil", "Batería de alta capacidad"],
-      // si tu modal usa galería, la imagen principal ya está arriba
       gallery: ["/IMG/triciclo-rojo.jpeg", "/IMG/triciclo-rojo2.jpeg", "/IMG/triciclo-rojo3.jpeg"]
     },
+
+    // ✅ NUEVOS (para que el cliente cobre depósito / invoice / monto a mano)
+    {
+      id: 5002,
+      name: "E-Bike Fat Tire (Black)",
+      brand: "E-Bike",
+      model: "Deposit / Invoice",
+      year: 2025,
+      price: 4000,
+      image: "/IMG/onepoint-ebike-black-4000.jpeg",
+      condition: "Nueva",
+      engine: "Electric",
+      featured: true,
+      description:
+        "Quick payment item for deposit/invoice. Add to cart and pay with card or Affirm.",
+      features: ["Motor eléctrico", "Ligero y ágil", "Batería de alta capacidad"]
+    },
+    {
+      id: 5003,
+      name: "E-Bike (Red)",
+      brand: "E-Bike",
+      model: "Deposit / Invoice",
+      year: 2025,
+      price: 2800,
+      image: "/IMG/onepoint-ebike-red-2800.jpeg",
+      condition: "Nueva",
+      engine: "Electric",
+      featured: true,
+      description:
+        "Quick payment item for deposit/invoice. Add to cart and pay with card or Affirm.",
+      features: ["Motor eléctrico", "Ligero y ágil", "Batería de alta capacidad"]
+    },
+    {
+      id: 5004,
+      name: "Electric Scooter (RGB)",
+      brand: "Scooter",
+      model: "Deposit / Invoice",
+      year: 2025,
+      price: 500,
+      image: "/IMG/onepoint-scooter-rgb-500.jpeg",
+      condition: "Nueva",
+      engine: "Electric",
+      featured: true,
+      description:
+        "Quick payment item for deposit/invoice. Add to cart and pay with card or Affirm.",
+      features: ["Motor eléctrico", "Ligero y ágil", "Batería de alta capacidad"]
+    },
+
     {
       id: 5,
       name: "Electric Scooter",
@@ -469,6 +517,7 @@ const Catalog: React.FC<CatalogProps> = ({ onViewDetails }) => {
                               qty: 1,
                               sku: String(moto.id),
                               url: window.location.href,
+                              image: moto.image, // ✅ así Affirm también recibe la imagen si tu AffirmButton la mapea
                             }]}
                             totalUSD={priceNum}
                           />

@@ -5,39 +5,66 @@ export interface CardItem {
   name: string;
   price: number;
   qty: number;
+  sku?: string;
 }
 
-export async function startCardCheckout(items: CardItem[]) {
-  if (!items || !items.length) {
-    throw new Error("no_items");
-  }
+const toNumber = (v: any) => {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : 0;
+};
 
-  // Llamamos a la función serverless /api/card-checkout
-  const res = await fetch("/api/card-checkout", {
+const toInt = (v: any, min = 1) => {
+  const n = Math.trunc(toNumber(v));
+  return Number.isFinite(n) ? Math.max(min, n) : min;
+};
+
+async function postJson(url: string, body: any) {
+  const res = await fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      items: items.map((it) => ({
-        name: it.name,
-        price: it.price,
-        qty: it.qty,
-      })),
-      origin: window.location.origin,
-    }),
+    credentials: "same-origin",
+    body: JSON.stringify(body),
   });
 
   let data: any = {};
   try {
     data = await res.json();
   } catch {
-    // por las dudas
+    // noop
   }
 
-  if (!res.ok || !data?.ok || !data?.url) {
-    console.error("[card-checkout] error body:", data);
-    throw new Error(data?.error || "card_checkout_failed");
+  return { res, data };
+}
+
+export async function startCardCheckout(items: CardItem[]) {
+  if (!items?.length) throw new Error("no_items");
+
+  const normalized = items
+    .map((it) => ({
+      name: String(it.name || "").slice(0, 120),
+      price: toNumber(it.price),
+      qty: toInt(it.qty, 1),
+    }))
+    .filter((it) => it.name && it.price > 0 && it.qty > 0);
+
+  if (!normalized.length) throw new Error("no_valid_items");
+
+  // ✅ endpoint estable en Netlify
+  const endpoints = ["/.netlify/functions/card-checkout", "/api/card-checkout"];
+
+  let lastErr: any = null;
+
+  for (const url of endpoints) {
+    const { res, data } = await postJson(url, { items: normalized });
+
+    if (res.ok && data?.ok && data?.url) {
+      window.location.href = data.url as string;
+      return;
+    }
+
+    lastErr = data?.error || data || `status_${res.status}`;
+    console.error("[card-checkout] failed:", url, lastErr);
   }
 
-  // Redirigimos a Stripe Checkout
-  window.location.href = data.url as string;
+  throw new Error(typeof lastErr === "string" ? lastErr : "card_checkout_failed");
 }

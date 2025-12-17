@@ -177,14 +177,21 @@ export default function AffirmButton({
       const unit_price = Math.round(Number(it.price) * 100);
       const qty = Math.max(1, Number(it.qty) || 1);
       const sku = (it.sku ?? `SKU-${idx + 1}`).toString().replace(/\s+/g, '-').slice(0, 64);
+      const toAbsUrl = (u?: string) => {
+        if (!u) return undefined;
+        try { return new URL(u, window.location.origin).toString(); }
+        catch { return undefined; }
+      };
+
       return {
         display_name: name,
         sku,
         unit_price,
-        qty,
-        item_url: it.url || window.location.href,
-        image_url: it.image, // nombre correcto para Affirm
+        qty: Math.trunc(qty),                 // qty int
+        item_url: toAbsUrl(it.url) || window.location.href,
+        item_image_url: toAbsUrl(it.image),   // ✅ nombre correcto en Affirm
       };
+
     });
   };
 
