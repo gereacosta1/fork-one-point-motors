@@ -305,8 +305,8 @@ export default function AffirmButton({
     // 3) Payload SIN billing/shipping/customer → Affirm pedirá nombre/apellido
     const checkout: any = {
   merchant: {
-    user_confirmation_url: `${window.location.origin}/affirm/confirm`,
-    user_cancel_url: `${window.location.origin}/affirm/cancel`,
+   user_confirmation_url: `${window.location.origin}/affirm/confirm.html`,
+   user_cancel_url: `${window.location.origin}/affirm/cancel.html`,
     user_confirmation_url_action: 'GET',
     name: 'ONE POINT MOTORS',
   },
