@@ -43,6 +43,9 @@ const toAbsUrl = (u?: string) => {
   }
 };
 
+const hasDeposit = (items?: CartItem[]) =>
+  (items ?? []).some((it) => (it.name || '').toLowerCase().includes('deposit'));
+
 /* ---------- Toast simple ---------- */
 function Toast({
   show,
@@ -92,10 +95,7 @@ function NiceModal({
   if (!open) return null;
   return (
     <div className="fixed inset-0 z-[9998] flex items-center justify-center p-4">
-      <div
-        className="absolute inset-0 bg-black/70 backdrop-blur-sm"
-        onClick={onClose}
-      />
+      <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
       <div className="relative w-[95%] max-w-md rounded-2xl bg-black/95 border border-brand/40 shadow-2xl p-6">
         <div className="flex items-start justify-between mb-3">
           <h3 className="text-xl font-black text-white">{title}</h3>
@@ -167,6 +167,8 @@ export default function AffirmButton({
 
   const [lastCheckoutPayload, setLastCheckoutPayload] = useState<any>(null);
 
+  const depositInCart = useMemo(() => hasDeposit(cartItems), [cartItems]);
+
   useEffect(() => {
     if (!PUBLIC_KEY) {
       console.error('Falta VITE_AFFIRM_PUBLIC_KEY');
@@ -198,7 +200,10 @@ export default function AffirmButton({
         const display_name = (it.name || `Item ${idx + 1}`).toString().slice(0, 120);
         const unit_price = Math.round(Number(it.price) * 100);
         const qty = Math.max(1, Math.trunc(Number(it.qty) || 1));
-        const sku = (it.sku ?? `SKU-${idx + 1}`).toString().replace(/\s+/g, '-').slice(0, 64);
+        const sku = (it.sku ?? `SKU-${idx + 1}`)
+          .toString()
+          .replace(/\s+/g, '-')
+          .slice(0, 64);
 
         const item: any = {
           display_name,
@@ -208,7 +213,6 @@ export default function AffirmButton({
           item_url: toAbsUrl(it.url) || window.location.href,
         };
 
-        // IMPORTANTE: solo setear si existe (evita undefined en payload)
         const img = toAbsUrl(it.image);
         if (img) item.item_image_url = img;
 
@@ -220,7 +224,8 @@ export default function AffirmButton({
   const getAffirmCallbacks = (orderId: string, totalCents: number) => ({
     onSuccess: async (res: { checkout_token: string }) => {
       try {
-        const r = await fetch('/api/affirm-authorize', {
+        // ✅ usar Netlify Functions directo
+        const r = await fetch('/.netlify/functions/affirm-authorize', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -281,9 +286,7 @@ export default function AffirmButton({
       console.warn('Affirm onValidationError', err);
       setOpening(false);
 
-      // Si Affirm devuelve missing_fields, lo mostramos para debug rápido
-      const fields =
-        err?.fields && Array.isArray(err.fields) ? err.fields.join(', ') : null;
+      const fields = err?.fields && Array.isArray(err.fields) ? err.fields.join(', ') : null;
 
       setModal({
         open: true,
@@ -307,10 +310,7 @@ export default function AffirmButton({
     },
   });
 
-  const merchantBase = useMemo(() => {
-    // normalmente window.location.origin ya es correcto, pero lo dejamos explícito
-    return window.location.origin;
-  }, []);
+  const merchantBase = useMemo(() => window.location.origin, []);
 
   const handleRetry = () => {
     setModal({ open: false, title: '', body: '', retry: false });
@@ -330,6 +330,17 @@ export default function AffirmButton({
   };
 
   const handleClick = () => {
+    // ✅ Compliance: depósitos sin Affirm
+    if (depositInCart) {
+      setModal({
+        open: true,
+        title: 'Depósitos sin financiación',
+        body: 'Los depósitos se pagan únicamente con tarjeta.',
+        retry: false,
+      });
+      return;
+    }
+
     const affirm = (window as any).affirm;
     if (!affirm?.checkout) {
       console.error('Affirm no está listo');
@@ -341,7 +352,6 @@ export default function AffirmButton({
     const shippingCents = toCents(shippingUSD);
     const taxCents = toCents(taxUSD);
 
-    // Validación items
     const invalids = items.filter(
       (it: any) =>
         !it.display_name ||
@@ -357,8 +367,8 @@ export default function AffirmButton({
     }
 
     const sumItems = items.reduce((acc: number, it: any) => acc + it.unit_price * it.qty, 0);
-
     const totalCentsFromProp = isFiniteNumber(totalUSD) ? Math.round(totalUSD * 100) : NaN;
+
     const totalCents = isFiniteNumber(totalCentsFromProp)
       ? totalCentsFromProp
       : sumItems + shippingCents + taxCents;
@@ -375,7 +385,6 @@ export default function AffirmButton({
 
     const orderId = `ORDER-${Date.now()}`;
 
-    // ✅ Clave: name/address SIEMPRE presentes (evita missing_fields)
     const billing = { name: FALLBACK_NAME, address: FALLBACK_ADDR };
     const shipping = { name: FALLBACK_NAME, address: FALLBACK_ADDR };
 
@@ -394,7 +403,7 @@ export default function AffirmButton({
       tax_amount: taxCents,
       total: totalCents,
       order_id: orderId,
-      metadata: { mode: 'modal' },
+      // metadata: { mode: 'modal' }, // opcional
     };
 
     console.group('[Affirm][CHECK]');
@@ -432,10 +441,7 @@ export default function AffirmButton({
   if (!ready) {
     return (
       <>
-        <button
-          disabled
-          className="bg-black/60 text-white px-5 py-3 rounded-xl border border-white/10"
-        >
+        <button disabled className="bg-black/60 text-white px-5 py-3 rounded-xl border border-white/10">
           Cargando Affirm…
         </button>
 
@@ -454,13 +460,20 @@ export default function AffirmButton({
       <button
         type="button"
         onClick={handleClick}
-        disabled={opening}
+        disabled={opening || depositInCart}
         className="bg-white text-black font-black px-5 py-3 rounded-xl text-lg
                    border-2 border-white shadow-md
                    hover:bg-brand hover:border-brand hover:text-black
-                   transition-all duration-300"
+                   transition-all duration-300
+                   disabled:opacity-60
+                   disabled:hover:bg-white disabled:hover:border-white disabled:hover:text-black"
+        title={
+          depositInCart
+            ? 'Deposits must be paid by card. Affirm is for full payments only.'
+            : undefined
+        }
       >
-        {opening ? 'Abriendo…' : 'Pay with Affirm'}
+        {opening ? 'Abriendo…' : depositInCart ? 'Pay by card (Deposit)' : 'Pay with Affirm'}
       </button>
 
       <Toast

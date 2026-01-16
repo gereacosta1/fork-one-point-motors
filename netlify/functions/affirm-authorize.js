@@ -1,10 +1,10 @@
 // netlify/functions/affirm-authorize.js
 // API v2: crea charge desde checkout_token y (opcional) captura el pago
 
-const isProd = String(process.env.AFFIRM_ENV || '').toLowerCase() === 'prod';
-const BASE = isProd
-  ? 'https://api.affirm.com/api/v2'
-  : 'https://api.sandbox.affirm.com/api/v2'; // <- corregido
+const isProd = String(process.env.AFFIRM_ENV || 'prod').toLowerCase() === 'prod';
+
+// Si NO tenés sandbox keys, forzamos PROD siempre
+const BASE = 'https://api.affirm.com/api/v2';
 
 // CORS básico
 const corsHeaders = {
@@ -61,7 +61,8 @@ export async function handler(event) {
           HAS_AFFIRM_MERCHANT_ID: Boolean(process.env.AFFIRM_MERCHANT_ID),
         },
         baseURL: BASE,
-        isProd,
+        forcedProd: true,
+        isProdDetected: isProd,
       };
       return {
         statusCode: 200,
@@ -70,7 +71,13 @@ export async function handler(event) {
       };
     }
 
-    const { checkout_token, order_id, amount_cents, shipping_carrier, shipping_confirmation } = body;
+    const {
+      checkout_token,
+      order_id,
+      amount_cents,
+      shipping_carrier,
+      shipping_confirmation,
+    } = body;
 
     if (!checkout_token || !order_id) {
       return {
@@ -82,6 +89,7 @@ export async function handler(event) {
 
     const PUB = process.env.AFFIRM_PUBLIC_KEY;
     const PRIV = process.env.AFFIRM_PRIVATE_KEY;
+
     if (!PUB || !PRIV) {
       return {
         statusCode: 500,
@@ -103,7 +111,11 @@ export async function handler(event) {
     });
 
     const charge = await authRes.json().catch(() => ({}));
-    console.log('[charges]', { env: isProd ? 'prod' : 'sandbox', status: authRes.status, resp: safe(charge) });
+    console.log('[charges]', {
+      env: 'prod-forced',
+      status: authRes.status,
+      resp: safe(charge),
+    });
 
     if (!authRes.ok) {
       return {
@@ -113,27 +125,33 @@ export async function handler(event) {
       };
     }
 
-    // 2) Capturar (si tu merchant no tiene auto-capture)
+    // 2) Capturar
     let capture = null;
     if (CAPTURE) {
-      if (typeof amount_cents !== 'number') {
+      const amt = Number(amount_cents);
+      if (!Number.isFinite(amt) || amt <= 0 || !Number.isInteger(amt)) {
         return {
           statusCode: 400,
           headers: corsHeaders,
-          body: JSON.stringify({ error: 'amount_cents required for capture=true' }),
+          body: JSON.stringify({
+            error: 'amount_cents required (positive integer) for capture=true',
+          }),
         };
       }
 
-      const capRes = await doFetch(`${BASE}/charges/${encodeURIComponent(charge.id)}/capture`, {
-        method: 'POST',
-        headers: { Authorization: AUTH, 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          order_id,
-          amount: amount_cents,
-          shipping_carrier,
-          shipping_confirmation,
-        }),
-      });
+      const capRes = await doFetch(
+        `${BASE}/charges/${encodeURIComponent(charge.id)}/capture`,
+        {
+          method: 'POST',
+          headers: { Authorization: AUTH, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            order_id,
+            amount: amt,
+            shipping_carrier,
+            shipping_confirmation,
+          }),
+        },
+      );
 
       capture = await capRes.json().catch(() => ({}));
       console.log('[capture]', { status: capRes.status, resp: safe(capture) });
@@ -147,7 +165,6 @@ export async function handler(event) {
       }
     }
 
-    // opcional: devolver nombre si viene en la respuesta
     const buyer = {
       billing_name: charge?.billing?.name || null,
       shipping_name: charge?.shipping?.name || null,
