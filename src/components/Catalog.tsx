@@ -110,49 +110,49 @@ const Catalog: React.FC<CatalogProps> = ({ onViewDetails }) => {
 
   const { addItem, open } = useCart();
 
-  // 🔄 Catálogo (incluye items "Deposit/Invoice" si los querés dentro del catálogo normal)
+  // 🔄 Catálogo (incluye items "Invoice" para cobros puntuales)
   const motorcycles: Motorcycle[] = [
-    // --- Deposits / Invoice (los 3 de tu WhatsApp + tus imágenes nuevas)
+    // --- Invoice items (SIN la palabra "Deposit" en ningún lado)
     {
       id: 9001,
-      name: "E-Bike Fat Tire (Black) — Deposit",
+      name: "E-Bike Fat Tire (Black) — Invoice",
       brand: "One Point",
-      model: "Invoice / Deposit",
+      model: "Invoice",
       year: 2025,
       price: 4000,
       image: "/IMG/onepoint-ebike-black-4000.jpeg",
       condition: "Nueva",
       engine: "Electric",
       featured: true,
-      description: "Deposit / invoice payment item. Financing available.",
+      description: "Invoice payment item. Financing available.",
       features: ["Electric motor", "High-capacity battery", "Light & agile"],
     },
     {
       id: 9002,
-      name: "E-Bike (Red) — Deposit",
+      name: "E-Bike (Red) — Invoice",
       brand: "One Point",
-      model: "Invoice / Deposit",
+      model: "Invoice",
       year: 2025,
       price: 2800,
       image: "/IMG/onepoint-ebike-red-2800.jpeg",
       condition: "Nueva",
       engine: "Electric",
       featured: true,
-      description: "Deposit / invoice payment item. Financing available.",
+      description: "Invoice payment item. Financing available.",
       features: ["Electric motor", "Light & agile", "High-capacity battery"],
     },
     {
       id: 9003,
-      name: "Electric Scooter (RGB) — Deposit",
+      name: "Electric Scooter (RGB) — Invoice",
       brand: "One Point",
-      model: "Invoice / Deposit",
+      model: "Invoice",
       year: 2025,
       price: 500,
       image: "/IMG/onepoint-scooter-rgb-500.jpeg",
       condition: "Nueva",
       engine: "Electric",
       featured: true,
-      description: "Deposit / invoice payment item. Financing available.",
+      description: "Invoice payment item. Financing available.",
       features: ["Electric motor", "Light & agile"],
     },
 

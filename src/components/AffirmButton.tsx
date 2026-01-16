@@ -43,9 +43,6 @@ const toAbsUrl = (u?: string) => {
   }
 };
 
-const hasDeposit = (items?: CartItem[]) =>
-  (items ?? []).some((it) => (it.name || '').toLowerCase().includes('deposit'));
-
 /* ---------- Toast simple ---------- */
 function Toast({
   show,
@@ -167,8 +164,6 @@ export default function AffirmButton({
 
   const [lastCheckoutPayload, setLastCheckoutPayload] = useState<any>(null);
 
-  const depositInCart = useMemo(() => hasDeposit(cartItems), [cartItems]);
-
   useEffect(() => {
     if (!PUBLIC_KEY) {
       console.error('Falta VITE_AFFIRM_PUBLIC_KEY');
@@ -224,7 +219,6 @@ export default function AffirmButton({
   const getAffirmCallbacks = (orderId: string, totalCents: number) => ({
     onSuccess: async (res: { checkout_token: string }) => {
       try {
-        // ✅ usar Netlify Functions directo
         const r = await fetch('/.netlify/functions/affirm-authorize', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -330,17 +324,6 @@ export default function AffirmButton({
   };
 
   const handleClick = () => {
-    // ✅ Compliance: depósitos sin Affirm
-    if (depositInCart) {
-      setModal({
-        open: true,
-        title: 'Depósitos sin financiación',
-        body: 'Los depósitos se pagan únicamente con tarjeta.',
-        retry: false,
-      });
-      return;
-    }
-
     const affirm = (window as any).affirm;
     if (!affirm?.checkout) {
       console.error('Affirm no está listo');
@@ -403,7 +386,6 @@ export default function AffirmButton({
       tax_amount: taxCents,
       total: totalCents,
       order_id: orderId,
-      // metadata: { mode: 'modal' }, // opcional
     };
 
     console.group('[Affirm][CHECK]');
@@ -460,20 +442,15 @@ export default function AffirmButton({
       <button
         type="button"
         onClick={handleClick}
-        disabled={opening || depositInCart}
+        disabled={opening}
         className="bg-white text-black font-black px-5 py-3 rounded-xl text-lg
                    border-2 border-white shadow-md
                    hover:bg-brand hover:border-brand hover:text-black
                    transition-all duration-300
                    disabled:opacity-60
                    disabled:hover:bg-white disabled:hover:border-white disabled:hover:text-black"
-        title={
-          depositInCart
-            ? 'Deposits must be paid by card. Affirm is for full payments only.'
-            : undefined
-        }
       >
-        {opening ? 'Abriendo…' : depositInCart ? 'Pay by card (Deposit)' : 'Pay with Affirm'}
+        {opening ? 'Abriendo…' : 'Pay with Affirm'}
       </button>
 
       <Toast

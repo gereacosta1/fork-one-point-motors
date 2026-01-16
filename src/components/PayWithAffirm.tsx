@@ -1,5 +1,5 @@
 // src/components/PayWithAffirm.tsx
-import React, { useMemo, useState } from 'react';
+import React, { useState } from 'react';
 import { useCart } from '../context/CartContext';
 import { loadAffirm } from '../lib/affirm';
 
@@ -23,15 +23,9 @@ const FALLBACK_ADDR = {
   country: 'US',
 };
 
-function hasDeposit(items: any[]) {
-  return items.some((it) => String(it?.name || '').toLowerCase().includes('deposit'));
-}
-
 export default function PayWithAffirm() {
   const { items, totalUSD } = useCart();
   const [opening, setOpening] = useState(false);
-
-  const depositInCart = useMemo(() => hasDeposit(items as any[]), [items]);
 
   const normalizeItems = () => {
     return (items as any[])
@@ -58,13 +52,6 @@ export default function PayWithAffirm() {
   async function openAffirm() {
     if (!items.length || !totalUSD || totalUSD <= 0) return;
 
-    // ✅ Compliance: depósitos sin Affirm
-    if (depositInCart) {
-      alert('Deposits must be paid by card. Affirm is available for full payments only.');
-
-      return;
-    }
-
     setOpening(true);
     try {
       const PUBLIC_KEY = import.meta.env.VITE_AFFIRM_PUBLIC_KEY || '';
@@ -80,10 +67,10 @@ export default function PayWithAffirm() {
       const itemsNorm = normalizeItems();
 
       // Total consistente con items
-     const sumItemsCents = (arr: any[]) =>
-    arr.reduce((acc: number, it: any) => acc + it.unit_price * it.qty, 0);
-      const totalCents = sumItemsCents(itemsNorm);
+      const sumItemsCents = (arr: any[]) =>
+        arr.reduce((acc: number, it: any) => acc + it.unit_price * it.qty, 0);
 
+      const totalCents = sumItemsCents(itemsNorm);
 
       const orderId = 'ORDER-' + Date.now();
 
@@ -105,7 +92,6 @@ export default function PayWithAffirm() {
         tax_amount: 0,
         total: totalCents,
         order_id: orderId,
-        // metadata: { source: 'onepointmotors.com' }, // opcional; mejor mínimo por ahora
       };
 
       console.group('[Affirm][Checkout Debug]');
@@ -183,12 +169,11 @@ export default function PayWithAffirm() {
   return (
     <button
       onClick={openAffirm}
-      disabled={opening || !items.length || !totalUSD || depositInCart}
+      disabled={opening || !items.length || !totalUSD || totalUSD <= 0}
       className="w-full bg-white text-black px-4 py-3 rounded-lg font-bold disabled:opacity-50 hover:bg-white/90"
       type="button"
-      title={depositInCart ? 'Deposits are available only by card' : undefined}
     >
-      {opening ? 'Opening…' : depositInCart ? 'Pay by card (Deposit)' : 'Pay with Affirm'}
+      {opening ? 'Opening…' : 'Pay with Affirm'}
     </button>
   );
 }
