@@ -18,7 +18,7 @@ type Props = {
   taxUSD?: number;
 };
 
-const MIN_TOTAL_CENTS = 5000; // $50 mínimo
+const MIN_TOTAL_CENTS = 5000; // $50
 const isFiniteNumber = (n: unknown): n is number =>
   typeof n === "number" && Number.isFinite(n);
 
@@ -149,9 +149,16 @@ export default function AffirmButton({
     message: string;
   }>({ show: false, type: "info", message: "" });
 
-  const showToast = (type: "success" | "error" | "info", message: string, ms = 2500) => {
+  const showToast = (
+    type: "success" | "error" | "info",
+    message: string,
+    ms = 2500
+  ) => {
     setToast({ show: true, type, message });
-    window.setTimeout(() => setToast((s) => ({ ...s, show: false })), ms);
+    window.setTimeout(
+      () => setToast((s) => ({ ...s, show: false })),
+      ms
+    );
   };
 
   const [modal, setModal] = useState<{
@@ -191,7 +198,9 @@ export default function AffirmButton({
 
     return itemsIn
       .map((it, idx) => {
-        const display_name = (it.name || `Item ${idx + 1}`).toString().slice(0, 120);
+        const display_name = (it.name || `Item ${idx + 1}`)
+          .toString()
+          .slice(0, 120);
         const unit_price = Math.round(Number(it.price) * 100);
         const qty = Math.max(1, Math.trunc(Number(it.qty) || 1));
         const sku = (it.sku ?? `SKU-${idx + 1}`)
@@ -227,42 +236,39 @@ export default function AffirmButton({
             checkout_token: res.checkout_token,
             order_id: orderId,
             amount_cents: totalCents,
-            capture: true, // ✅ CAPTURA INMEDIATA
+            capture: true,
           }),
         });
 
-        const text = await r.text();
-        let data: any = null;
+        const t = await r.text();
+        let data: any;
         try {
-          data = text ? JSON.parse(text) : null;
+          data = t ? JSON.parse(t) : null;
         } catch {
-          data = { raw: text };
+          data = { raw: t };
         }
 
         console.log("affirm-authorize →", { ok: r.ok, status: r.status, data });
 
         if (!r.ok) {
-          const step = data?.step ? ` (step: ${data.step})` : "";
           setModal({
             open: true,
             title: "Affirm aprobó, pero no se pudo capturar",
             body:
-              "Se aprobó la solicitud, pero falló la confirmación/captura en el servidor" +
-              step +
-              ". Reintentá en unos segundos o avisános.",
+              "El servidor devolvió un error al crear/capturar el charge. Probá reintentar o avisános.",
             retry: true,
           });
           return;
         }
 
-        showToast("success", "¡Pago capturado con éxito!");
+        showToast("success", "Listo: aprobado y capturado.");
       } catch (e) {
         console.warn("Falló llamada a función:", e);
         setModal({
           open: true,
-          title: "No pudimos capturar el pago",
+          title: "No pudimos confirmar tu solicitud",
           body:
-            "Tuvimos un problema al confirmar/capturar con nuestro servidor. Intentá nuevamente en unos segundos.",
+            "Tuvimos un problema al confirmar con nuestro servidor. Intentá nuevamente.",
           retry: true,
         });
       } finally {
@@ -276,7 +282,7 @@ export default function AffirmButton({
       setModal({
         open: true,
         title: "No se completó la financiación",
-        body: "Tu solicitud no pudo completarse. Podés intentarlo de nuevo.",
+        body: "La solicitud no pudo completarse. Podés intentarlo de nuevo.",
         retry: true,
       });
     },
@@ -285,14 +291,15 @@ export default function AffirmButton({
       console.warn("Affirm onValidationError", err);
       setOpening(false);
 
-      const fields = err?.fields && Array.isArray(err.fields) ? err.fields.join(", ") : null;
+      const fields =
+        err?.fields && Array.isArray(err.fields) ? err.fields.join(", ") : null;
 
       setModal({
         open: true,
         title: "Datos inválidos para Affirm",
         body: fields
           ? `Affirm rechazó el payload. Missing fields: ${fields}`
-          : "Revisá el precio, total, y datos mínimos requeridos.",
+          : "Revisá precio, total y datos mínimos requeridos.",
         retry: false,
       });
     },
@@ -317,7 +324,9 @@ export default function AffirmButton({
     const affirm = (window as any).affirm;
     try {
       affirm.checkout(lastCheckoutPayload);
-      affirm.checkout.open(getAffirmCallbacks(lastCheckoutPayload.order_id, lastCheckoutPayload.total));
+      affirm.checkout.open(
+        getAffirmCallbacks(lastCheckoutPayload.order_id, lastCheckoutPayload.total)
+      );
     } catch (e) {
       console.error("Reintento falló:", e);
       showToast("error", "No se pudo reintentar el pago.");
@@ -350,8 +359,13 @@ export default function AffirmButton({
       return;
     }
 
-    const sumItems = items.reduce((acc: number, it: any) => acc + it.unit_price * it.qty, 0);
-    const totalCentsFromProp = isFiniteNumber(totalUSD) ? Math.round(totalUSD * 100) : NaN;
+    const sumItems = items.reduce(
+      (acc: number, it: any) => acc + it.unit_price * it.qty,
+      0
+    );
+    const totalCentsFromProp = isFiniteNumber(totalUSD)
+      ? Math.round(totalUSD * 100)
+      : NaN;
 
     const totalCents = isFiniteNumber(totalCentsFromProp)
       ? totalCentsFromProp
@@ -368,6 +382,7 @@ export default function AffirmButton({
     }
 
     const orderId = `ORDER-${Date.now()}`;
+
     const billing = { name: FALLBACK_NAME, address: FALLBACK_ADDR };
     const shipping = { name: FALLBACK_NAME, address: FALLBACK_ADDR };
 
@@ -387,18 +402,6 @@ export default function AffirmButton({
       total: totalCents,
       order_id: orderId,
     };
-
-    console.group("[Affirm][CHECK]");
-    console.table(
-      items.map((it: any) => ({
-        display_name: it.display_name,
-        sku: it.sku,
-        unit_price_cents: it.unit_price,
-        qty: it.qty,
-      }))
-    );
-    console.log("shipping_cents:", shippingCents, "tax_cents:", taxCents, "TOTAL:", totalCents);
-    console.groupEnd();
 
     setLastCheckoutPayload({ ...checkout });
     setOpening(true);
