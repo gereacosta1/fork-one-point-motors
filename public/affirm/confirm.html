@@ -22,16 +22,72 @@
     <!-- 🔎 DEBUG checkout_token -->
     <div id="tokenBox"></div>
     <script>
-      const q = new URLSearchParams(location.search);
-      const tok = q.get('checkout_token');
-      if (tok) {
-        document.getElementById("tokenBox").innerHTML =
-          `<h2>checkout_token capturado:</h2>
-           <pre>${tok}</pre>
-           <p>Copialo y probalo con cURL en <code>/api/affirm-authorize</code></p>`;
-        console.log("checkout_token:", tok);
+  (async () => {
+    const q = new URLSearchParams(location.search);
+    const tok = q.get('checkout_token');
+
+    const order_id = sessionStorage.getItem('affirm_order_id');
+    const amount_cents = Number(sessionStorage.getItem('affirm_amount_cents') || 0);
+
+    const box = document.getElementById("tokenBox");
+
+    if (!tok) {
+      box.innerHTML = `<p style="color:#f87171">Error: no llegó checkout_token.</p>`;
+      return;
+    }
+
+    // UI debug mínima
+    box.innerHTML = `
+      <h2>checkout_token capturado:</h2>
+      <pre>${tok}</pre>
+      <p>Capturando el pago...</p>
+    `;
+
+    if (!order_id || !Number.isInteger(amount_cents) || amount_cents <= 0) {
+      box.innerHTML += `
+        <p style="color:#f87171">
+          Falta order_id o amount_cents. No puedo capturar automáticamente.<br/>
+          order_id: ${order_id || '(vacío)'}<br/>
+          amount_cents: ${amount_cents || '(vacío)'}
+        </p>`;
+      console.error("Missing order_id / amount_cents", { order_id, amount_cents });
+      return;
+    }
+
+    try {
+      const r = await fetch('/.netlify/functions/affirm-authorize', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          checkout_token: tok,
+          order_id,
+          amount_cents,
+          // opcional: shipping_carrier, shipping_confirmation
+        })
+      });
+
+      const data = await r.json().catch(() => ({}));
+
+      if (!r.ok || !data.ok) {
+        box.innerHTML += `<p style="color:#f87171">Error capturando: ${r.status}</p><pre>${JSON.stringify(data, null, 2)}</pre>`;
+        console.error("Capture error", r.status, data);
+        return;
       }
-    </script>
+
+      box.innerHTML += `<p style="color:#34d399">Listo: pago capturado.</p><pre>${JSON.stringify(data, null, 2)}</pre>`;
+      console.log("Captured:", data);
+
+      // Limpieza para que no quede basura
+      sessionStorage.removeItem('affirm_order_id');
+      sessionStorage.removeItem('affirm_amount_cents');
+
+    } catch (e) {
+      box.innerHTML += `<p style="color:#f87171">Error de red capturando.</p>`;
+      console.error(e);
+    }
+  })();
+</script>
+
   </div>
 </body>
 </html>

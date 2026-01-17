@@ -1,6 +1,6 @@
 // src/components/AffirmButton.tsx
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
-import { loadAffirm } from '../lib/affirm';
+import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { loadAffirm } from "../lib/affirm";
 
 type CartItem = {
   name: string;
@@ -20,18 +20,17 @@ type Props = {
 
 const MIN_TOTAL_CENTS = 5000; // $50 mínimo
 const isFiniteNumber = (n: unknown): n is number =>
-  typeof n === 'number' && Number.isFinite(n);
+  typeof n === "number" && Number.isFinite(n);
 
-/* ---------- Helpers ---------- */
 const toCents = (usd: unknown) => Math.round((Number(usd) || 0) * 100);
 
-const FALLBACK_NAME = { first: 'Online', last: 'Customer' };
+const FALLBACK_NAME = { first: "Online", last: "Customer" };
 const FALLBACK_ADDR = {
-  line1: '297 NW 54th St',
-  city: 'Miami',
-  state: 'FL',
-  zipcode: '33127',
-  country: 'US',
+  line1: "297 NW 54th St",
+  city: "Miami",
+  state: "FL",
+  zipcode: "33127",
+  country: "US",
 };
 
 const toAbsUrl = (u?: string) => {
@@ -43,7 +42,6 @@ const toAbsUrl = (u?: string) => {
   }
 };
 
-/* ---------- Toast simple ---------- */
 function Toast({
   show,
   type,
@@ -51,19 +49,19 @@ function Toast({
   onClose,
 }: {
   show: boolean;
-  type: 'success' | 'error' | 'info';
+  type: "success" | "error" | "info";
   message: string;
   onClose: () => void;
 }) {
   if (!show) return null;
   const base =
-    'fixed bottom-6 left-1/2 -translate-x-1/2 z-[9999] px-4 py-3 rounded-xl shadow-2xl border text-sm font-semibold';
+    "fixed bottom-6 left-1/2 -translate-x-1/2 z-[9999] px-4 py-3 rounded-xl shadow-2xl border text-sm font-semibold";
   const palette =
-    type === 'success'
-      ? 'bg-green-600/95 text-white border-green-400'
-      : type === 'error'
-      ? 'bg-red-600/95 text-white border-red-400'
-      : 'bg-black/90 text-white border-white/20';
+    type === "success"
+      ? "bg-green-600/95 text-white border-green-400"
+      : type === "error"
+      ? "bg-red-600/95 text-white border-red-400"
+      : "bg-black/90 text-white border-white/20";
   return (
     <div className={`${base} ${palette}`} role="status" onClick={onClose}>
       {message}
@@ -71,7 +69,6 @@ function Toast({
   );
 }
 
-/* ---------- Modal (dark / brand) ---------- */
 function NiceModal({
   open,
   title,
@@ -92,7 +89,10 @@ function NiceModal({
   if (!open) return null;
   return (
     <div className="fixed inset-0 z-[9998] flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
+      <div
+        className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+        onClick={onClose}
+      />
       <div className="relative w-[95%] max-w-md rounded-2xl bg-black/95 border border-brand/40 shadow-2xl p-6">
         <div className="flex items-start justify-between mb-3">
           <h3 className="text-xl font-black text-white">{title}</h3>
@@ -132,25 +132,24 @@ function NiceModal({
   );
 }
 
-/* ---------- Botón Affirm ---------- */
 export default function AffirmButton({
   cartItems,
   totalUSD,
   shippingUSD = 0,
   taxUSD = 0,
 }: Props) {
-  const PUBLIC_KEY = import.meta.env.VITE_AFFIRM_PUBLIC_KEY || '';
+  const PUBLIC_KEY = import.meta.env.VITE_AFFIRM_PUBLIC_KEY || "";
 
   const [ready, setReady] = useState(false);
   const [opening, setOpening] = useState(false);
 
   const [toast, setToast] = useState<{
     show: boolean;
-    type: 'success' | 'error' | 'info';
+    type: "success" | "error" | "info";
     message: string;
-  }>({ show: false, type: 'info', message: '' });
+  }>({ show: false, type: "info", message: "" });
 
-  const showToast = (type: 'success' | 'error' | 'info', message: string, ms = 2500) => {
+  const showToast = (type: "success" | "error" | "info", message: string, ms = 2500) => {
     setToast({ show: true, type, message });
     window.setTimeout(() => setToast((s) => ({ ...s, show: false })), ms);
   };
@@ -160,19 +159,19 @@ export default function AffirmButton({
     title: string;
     body: string;
     retry?: boolean;
-  }>({ open: false, title: '', body: '', retry: false });
+  }>({ open: false, title: "", body: "", retry: false });
 
   const [lastCheckoutPayload, setLastCheckoutPayload] = useState<any>(null);
 
   useEffect(() => {
     if (!PUBLIC_KEY) {
-      console.error('Falta VITE_AFFIRM_PUBLIC_KEY');
+      console.error("Falta VITE_AFFIRM_PUBLIC_KEY");
       return;
     }
     loadAffirm(PUBLIC_KEY)
       .then(() => setReady(true))
       .catch((e) => {
-        console.error('loadAffirm error:', e);
+        console.error("loadAffirm error:", e);
         setReady(false);
       });
   }, [PUBLIC_KEY]);
@@ -181,8 +180,8 @@ export default function AffirmButton({
     if (!itemsIn?.length) {
       return [
         {
-          display_name: 'Smoke test item',
-          sku: 'SMOKE-001',
+          display_name: "Smoke test item",
+          sku: "SMOKE-001",
           unit_price: 2000,
           qty: 1,
           item_url: window.location.href,
@@ -197,7 +196,7 @@ export default function AffirmButton({
         const qty = Math.max(1, Math.trunc(Number(it.qty) || 1));
         const sku = (it.sku ?? `SKU-${idx + 1}`)
           .toString()
-          .replace(/\s+/g, '-')
+          .replace(/\s+/g, "-")
           .slice(0, 64);
 
         const item: any = {
@@ -216,17 +215,19 @@ export default function AffirmButton({
       .filter((x) => x.display_name && x.unit_price > 0 && x.qty > 0);
   };
 
+  const merchantBase = useMemo(() => window.location.origin, []);
+
   const getAffirmCallbacks = (orderId: string, totalCents: number) => ({
     onSuccess: async (res: { checkout_token: string }) => {
       try {
-        const r = await fetch('/.netlify/functions/affirm-authorize', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+        const r = await fetch("/.netlify/functions/affirm-authorize", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             checkout_token: res.checkout_token,
             order_id: orderId,
             amount_cents: totalCents,
-            capture: true,
+            capture: true, // ✅ CAPTURA INMEDIATA
           }),
         });
 
@@ -238,26 +239,30 @@ export default function AffirmButton({
           data = { raw: text };
         }
 
-        console.log('affirm-authorize →', { ok: r.ok, status: r.status, data });
+        console.log("affirm-authorize →", { ok: r.ok, status: r.status, data });
 
         if (!r.ok) {
+          const step = data?.step ? ` (step: ${data.step})` : "";
           setModal({
             open: true,
-            title: 'No pudimos confirmar la solicitud',
+            title: "Affirm aprobó, pero no se pudo capturar",
             body:
-              'Affirm aprobó, pero nuestro servidor devolvió un error al confirmar. Reintentá en unos segundos o avisános.',
+              "Se aprobó la solicitud, pero falló la confirmación/captura en el servidor" +
+              step +
+              ". Reintentá en unos segundos o avisános.",
             retry: true,
           });
           return;
         }
 
-        showToast('success', '¡Solicitud enviada con éxito!');
+        showToast("success", "¡Pago capturado con éxito!");
       } catch (e) {
-        console.warn('Falló llamada a función:', e);
+        console.warn("Falló llamada a función:", e);
         setModal({
           open: true,
-          title: 'No pudimos confirmar tu solicitud',
-          body: 'Tuvimos un problema al confirmar con nuestro servidor. Intentá nuevamente en unos segundos.',
+          title: "No pudimos capturar el pago",
+          body:
+            "Tuvimos un problema al confirmar/capturar con nuestro servidor. Intentá nuevamente en unos segundos.",
           retry: true,
         });
       } finally {
@@ -266,68 +271,64 @@ export default function AffirmButton({
     },
 
     onFail: (err: any) => {
-      console.warn('Affirm onFail', err);
+      console.warn("Affirm onFail", err);
       setOpening(false);
       setModal({
         open: true,
-        title: 'No se completó la financiación',
-        body: 'Tu solicitud no pudo completarse. Podés intentarlo de nuevo.',
+        title: "No se completó la financiación",
+        body: "Tu solicitud no pudo completarse. Podés intentarlo de nuevo.",
         retry: true,
       });
     },
 
     onValidationError: (err: any) => {
-      console.warn('Affirm onValidationError', err);
+      console.warn("Affirm onValidationError", err);
       setOpening(false);
 
-      const fields = err?.fields && Array.isArray(err.fields) ? err.fields.join(', ') : null;
+      const fields = err?.fields && Array.isArray(err.fields) ? err.fields.join(", ") : null;
 
       setModal({
         open: true,
-        title: 'Datos inválidos para Affirm',
+        title: "Datos inválidos para Affirm",
         body: fields
           ? `Affirm rechazó el payload. Missing fields: ${fields}`
-          : 'Revisá el precio, total, y datos mínimos requeridos.',
+          : "Revisá el precio, total, y datos mínimos requeridos.",
         retry: false,
       });
     },
 
     onClose: () => {
-      console.log('Affirm modal cerrado por el usuario.');
+      console.log("Affirm modal cerrado por el usuario.");
       setOpening(false);
       setModal({
         open: true,
-        title: 'Proceso cancelado',
-        body: 'No se realizó ningún cargo. ¿Querés intentarlo de nuevo?',
+        title: "Proceso cancelado",
+        body: "No se realizó ningún cargo. ¿Querés intentarlo de nuevo?",
         retry: true,
       });
     },
   });
 
-  const merchantBase = useMemo(() => window.location.origin, []);
-
   const handleRetry = () => {
-    setModal({ open: false, title: '', body: '', retry: false });
+    setModal({ open: false, title: "", body: "", retry: false });
 
     if (!lastCheckoutPayload) return;
 
     const affirm = (window as any).affirm;
     try {
       affirm.checkout(lastCheckoutPayload);
-      affirm.checkout.open(
-        getAffirmCallbacks(lastCheckoutPayload.order_id, lastCheckoutPayload.total),
-      );
+      affirm.checkout.open(getAffirmCallbacks(lastCheckoutPayload.order_id, lastCheckoutPayload.total));
     } catch (e) {
-      console.error('Reintento falló:', e);
-      showToast('error', 'No se pudo reintentar el pago.');
+      console.error("Reintento falló:", e);
+      showToast("error", "No se pudo reintentar el pago.");
     }
   };
 
   const handleClick = () => {
     const affirm = (window as any).affirm;
     if (!affirm?.checkout) {
-      console.error('Affirm no está listo');
-      showToast('error', 'Affirm todavía no está listo.');
+      console.error("Affirm no está listo");
+      showToast("error", "Affirm todavía no está listo.");
       return;
     }
 
@@ -341,11 +342,11 @@ export default function AffirmButton({
         !isFiniteNumber(it.unit_price) ||
         it.unit_price <= 0 ||
         !isFiniteNumber(it.qty) ||
-        it.qty <= 0,
+        it.qty <= 0
     );
     if (invalids.length) {
-      console.warn('Items inválidos para Affirm:', invalids, { items });
-      showToast('error', 'Precio o cantidad inválidos. Revisá el producto.');
+      console.warn("Items inválidos para Affirm:", invalids, { items });
+      showToast("error", "Precio o cantidad inválidos. Revisá el producto.");
       return;
     }
 
@@ -359,15 +360,14 @@ export default function AffirmButton({
     if (!isFiniteNumber(totalCents) || totalCents < MIN_TOTAL_CENTS) {
       setModal({
         open: true,
-        title: 'Importe no disponible para financiación',
-        body: 'El total es demasiado bajo para Affirm.',
+        title: "Importe no disponible para financiación",
+        body: "El total es demasiado bajo para Affirm.",
         retry: false,
       });
       return;
     }
 
     const orderId = `ORDER-${Date.now()}`;
-
     const billing = { name: FALLBACK_NAME, address: FALLBACK_ADDR };
     const shipping = { name: FALLBACK_NAME, address: FALLBACK_ADDR };
 
@@ -375,37 +375,30 @@ export default function AffirmButton({
       merchant: {
         user_confirmation_url: `${merchantBase}/affirm/confirm.html`,
         user_cancel_url: `${merchantBase}/affirm/cancel.html`,
-        user_confirmation_url_action: 'GET',
-        name: 'ONE POINT MOTORS',
+        user_confirmation_url_action: "GET",
+        name: "ONE POINT MOTORS",
       },
       billing,
       shipping,
       items,
-      currency: 'USD',
+      currency: "USD",
       shipping_amount: shippingCents,
       tax_amount: taxCents,
       total: totalCents,
       order_id: orderId,
     };
 
-    console.group('[Affirm][CHECK]');
+    console.group("[Affirm][CHECK]");
     console.table(
       items.map((it: any) => ({
         display_name: it.display_name,
         sku: it.sku,
         unit_price_cents: it.unit_price,
         qty: it.qty,
-      })),
+      }))
     );
-    console.log('shipping_cents:', shippingCents, 'tax_cents:', taxCents, 'TOTAL:', totalCents);
-    console.log('billing:', billing);
-    console.log('shipping:', shipping);
+    console.log("shipping_cents:", shippingCents, "tax_cents:", taxCents, "TOTAL:", totalCents);
     console.groupEnd();
-
-    try {
-      sessionStorage.setItem('affirm_amount_cents', String(totalCents));
-      sessionStorage.setItem('affirm_order_id', orderId);
-    } catch {}
 
     setLastCheckoutPayload({ ...checkout });
     setOpening(true);
@@ -414,16 +407,19 @@ export default function AffirmButton({
       affirm.checkout(checkout);
       affirm.checkout.open(getAffirmCallbacks(orderId, totalCents));
     } catch (e) {
-      console.error('Error al abrir Affirm:', e);
+      console.error("Error al abrir Affirm:", e);
       setOpening(false);
-      showToast('error', 'No se pudo abrir Affirm. Intentá nuevamente.');
+      showToast("error", "No se pudo abrir Affirm. Intentá nuevamente.");
     }
   };
 
   if (!ready) {
     return (
       <>
-        <button disabled className="bg-black/60 text-white px-5 py-3 rounded-xl border border-white/10">
+        <button
+          disabled
+          className="bg-black/60 text-white px-5 py-3 rounded-xl border border-white/10"
+        >
           Cargando Affirm…
         </button>
 
@@ -450,7 +446,7 @@ export default function AffirmButton({
                    disabled:opacity-60
                    disabled:hover:bg-white disabled:hover:border-white disabled:hover:text-black"
       >
-        {opening ? 'Abriendo…' : 'Pay with Affirm'}
+        {opening ? "Abriendo…" : "Pay with Affirm"}
       </button>
 
       <Toast
@@ -463,9 +459,9 @@ export default function AffirmButton({
       <NiceModal
         open={modal.open}
         title={modal.title}
-        onClose={() => setModal({ open: false, title: '', body: '' })}
+        onClose={() => setModal({ open: false, title: "", body: "" })}
         secondaryLabel="Cerrar"
-        primaryLabel={modal.retry ? 'Reintentar' : undefined}
+        primaryLabel={modal.retry ? "Reintentar" : undefined}
         onPrimary={modal.retry ? handleRetry : undefined}
       >
         {modal.body}
