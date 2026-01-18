@@ -19,6 +19,7 @@ type Props = {
 };
 
 const MIN_TOTAL_CENTS = 5000; // $50
+
 const isFiniteNumber = (n: unknown): n is number =>
   typeof n === "number" && Number.isFinite(n);
 
@@ -155,10 +156,7 @@ export default function AffirmButton({
     ms = 2500
   ) => {
     setToast({ show: true, type, message });
-    window.setTimeout(
-      () => setToast((s) => ({ ...s, show: false })),
-      ms
-    );
+    window.setTimeout(() => setToast((s) => ({ ...s, show: false })), ms);
   };
 
   const [modal, setModal] = useState<{
@@ -226,16 +224,16 @@ export default function AffirmButton({
 
   const merchantBase = useMemo(() => window.location.origin, []);
 
-  const getAffirmCallbacks = (orderId: string, totalCents: number) => ({
+  const getAffirmCallbacks = (orderId: string) => ({
     onSuccess: async (res: { checkout_token: string }) => {
       try {
+        // Backend autoriza + captura (no mandamos amount_cents)
         const r = await fetch("/.netlify/functions/affirm-authorize", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             checkout_token: res.checkout_token,
             order_id: orderId,
-            amount_cents: totalCents,
             capture: true,
           }),
         });
@@ -250,18 +248,23 @@ export default function AffirmButton({
 
         console.log("affirm-authorize →", { ok: r.ok, status: r.status, data });
 
-        if (!r.ok) {
+        if (!r.ok || !data?.ok) {
           setModal({
             open: true,
             title: "Affirm aprobó, pero no se pudo capturar",
             body:
-              "El servidor devolvió un error al crear/capturar el charge. Probá reintentar o avisános.",
-            retry: true,
+              "El cliente fue aprobado, pero el servidor devolvió error en authorize/capture. Revisá Logs de Netlify (Functions) y lo ajusto.",
+            retry: false,
           });
           return;
         }
 
         showToast("success", "Listo: aprobado y capturado.");
+
+        // Limpieza por si Affirm redirige al confirm.html igual
+        try {
+          sessionStorage.removeItem("affirm_order_id");
+        } catch {}
       } catch (e) {
         console.warn("Falló llamada a función:", e);
         setModal({
@@ -269,7 +272,7 @@ export default function AffirmButton({
           title: "No pudimos confirmar tu solicitud",
           body:
             "Tuvimos un problema al confirmar con nuestro servidor. Intentá nuevamente.",
-          retry: true,
+          retry: false,
         });
       } finally {
         setOpening(false);
@@ -324,9 +327,7 @@ export default function AffirmButton({
     const affirm = (window as any).affirm;
     try {
       affirm.checkout(lastCheckoutPayload);
-      affirm.checkout.open(
-        getAffirmCallbacks(lastCheckoutPayload.order_id, lastCheckoutPayload.total)
-      );
+      affirm.checkout.open(getAffirmCallbacks(lastCheckoutPayload.order_id));
     } catch (e) {
       console.error("Reintento falló:", e);
       showToast("error", "No se pudo reintentar el pago.");
@@ -363,6 +364,7 @@ export default function AffirmButton({
       (acc: number, it: any) => acc + it.unit_price * it.qty,
       0
     );
+
     const totalCentsFromProp = isFiniteNumber(totalUSD)
       ? Math.round(totalUSD * 100)
       : NaN;
@@ -382,6 +384,11 @@ export default function AffirmButton({
     }
 
     const orderId = `ORDER-${Date.now()}`;
+
+    // CLAVE: si Affirm redirige a confirm.html, ahí necesitan order_id.
+    try {
+      sessionStorage.setItem("affirm_order_id", orderId);
+    } catch {}
 
     const billing = { name: FALLBACK_NAME, address: FALLBACK_ADDR };
     const shipping = { name: FALLBACK_NAME, address: FALLBACK_ADDR };
@@ -403,12 +410,12 @@ export default function AffirmButton({
       order_id: orderId,
     };
 
-    setLastCheckoutPayload({ ...checkout });
+    setLastCheckoutPayload(checkout);
     setOpening(true);
 
     try {
       affirm.checkout(checkout);
-      affirm.checkout.open(getAffirmCallbacks(orderId, totalCents));
+      affirm.checkout.open(getAffirmCallbacks(orderId));
     } catch (e) {
       console.error("Error al abrir Affirm:", e);
       setOpening(false);

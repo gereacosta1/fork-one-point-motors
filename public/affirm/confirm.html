@@ -5,89 +5,90 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Pago con Affirm – Confirmado</title>
   <style>
-    body{background:#0b0b0b;color:#fff;font-family:system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji";margin:0;padding:40px}
+    body{background:#0b0b0b;color:#fff;font-family:system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, "Helvetica Neue", Arial, "Noto Sans";margin:0;padding:40px}
     .card{max-width:720px;margin:0 auto;background:#111;border:1px solid #2a2a2a;border-radius:16px;padding:24px}
     .ok{display:inline-block;padding:6px 10px;border-radius:999px;background:#16a34a;color:#fff;font-weight:700;font-size:12px;letter-spacing:.02em}
-    pre{background:#0f0f0f;border:1px solid #272727;border-radius:12px;padding:12px;overflow:auto}
     a{color:#38bdf8}
+    .muted{color:#cfcfcf}
+    .hint{margin-top:14px;font-size:13px;color:#9aa0a6}
+    pre{background:#0f0f0f;border:1px solid #272727;border-radius:12px;padding:12px;overflow:auto;color:#e5e7eb}
+    .error{color:#f87171}
+    .success{color:#34d399}
   </style>
 </head>
 <body>
   <div class="card">
-    <div class="ok">Autorizado</div>
+    <div class="ok">Confirmado</div>
     <h1>Gracias, tu solicitud en Affirm fue enviada.</h1>
-    <p>Podés cerrar esta ventana y volver a la tienda.</p>
+    <p class="muted">Ya podés cerrar esta ventana y volver a la tienda. Si no ves el pedido reflejado, avisale al vendedor.</p>
     <p><a href="/">Volver a ONE POINT MOTORS</a></p>
 
-    <!-- 🔎 DEBUG checkout_token -->
-    <div id="tokenBox"></div>
+    <!-- Captura "silenciosa" (sin mostrar tokens) para asegurar que quede registrado/capturado en backend -->
+    <div id="status" class="hint">Procesando confirmación…</div>
+    <pre id="debug" style="display:none"></pre>
+
     <script>
-  (async () => {
-    const q = new URLSearchParams(location.search);
-    const tok = q.get('checkout_token');
+      (async () => {
+        const statusEl = document.getElementById("status");
+        const debugEl = document.getElementById("debug");
 
-    const order_id = sessionStorage.getItem('affirm_order_id');
-    const amount_cents = Number(sessionStorage.getItem('affirm_amount_cents') || 0);
+        const q = new URLSearchParams(location.search);
+        const checkout_token = q.get("checkout_token");
 
-    const box = document.getElementById("tokenBox");
+        // Se setea desde AffirmButton.tsx antes de abrir Affirm
+        const order_id = sessionStorage.getItem("affirm_order_id");
 
-    if (!tok) {
-      box.innerHTML = `<p style="color:#f87171">Error: no llegó checkout_token.</p>`;
-      return;
-    }
+        // Si no hay token, igual dejamos el mensaje normal y salimos
+        if (!checkout_token) {
+          statusEl.textContent = "Confirmación recibida.";
+          return;
+        }
 
-    // UI debug mínima
-    box.innerHTML = `
-      <h2>checkout_token capturado:</h2>
-      <pre>${tok}</pre>
-      <p>Capturando el pago...</p>
-    `;
+        // Si falta order_id, no hacemos call (así evitamos requests inválidos)
+        if (!order_id) {
+          statusEl.innerHTML = '<span class="error">Listo, pero faltó el order_id para confirmar automáticamente.</span>';
+          // Opcional debug (no mostramos token)
+          debugEl.style.display = "block";
+          debugEl.textContent = JSON.stringify({ ok: false, step: "confirm.html", error: "missing_order_id" }, null, 2);
+          return;
+        }
 
-    if (!order_id || !Number.isInteger(amount_cents) || amount_cents <= 0) {
-      box.innerHTML += `
-        <p style="color:#f87171">
-          Falta order_id o amount_cents. No puedo capturar automáticamente.<br/>
-          order_id: ${order_id || '(vacío)'}<br/>
-          amount_cents: ${amount_cents || '(vacío)'}
-        </p>`;
-      console.error("Missing order_id / amount_cents", { order_id, amount_cents });
-      return;
-    }
+        try {
+          const r = await fetch("/.netlify/functions/affirm-authorize", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              checkout_token,
+              order_id,
+              capture: true
+            })
+          });
 
-    try {
-      const r = await fetch('/.netlify/functions/affirm-authorize', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          checkout_token: tok,
-          order_id,
-          amount_cents,
-          // opcional: shipping_carrier, shipping_confirmation
-        })
-      });
+          const data = await r.json().catch(() => ({}));
 
-      const data = await r.json().catch(() => ({}));
+          if (!r.ok || !data.ok) {
+            statusEl.innerHTML = '<span class="error">Confirmado, pero hubo un error registrando/capturando el pago.</span>';
+            // Debug opcional (sin token)
+            debugEl.style.display = "block";
+            debugEl.textContent = JSON.stringify(
+              { ok: false, status: r.status, step: "affirm-authorize", response: data },
+              null,
+              2
+            );
+            return;
+          }
 
-      if (!r.ok || !data.ok) {
-        box.innerHTML += `<p style="color:#f87171">Error capturando: ${r.status}</p><pre>${JSON.stringify(data, null, 2)}</pre>`;
-        console.error("Capture error", r.status, data);
-        return;
-      }
+          statusEl.innerHTML = '<span class="success">Confirmación completada.</span>';
 
-      box.innerHTML += `<p style="color:#34d399">Listo: pago capturado.</p><pre>${JSON.stringify(data, null, 2)}</pre>`;
-      console.log("Captured:", data);
-
-      // Limpieza para que no quede basura
-      sessionStorage.removeItem('affirm_order_id');
-      sessionStorage.removeItem('affirm_amount_cents');
-
-    } catch (e) {
-      box.innerHTML += `<p style="color:#f87171">Error de red capturando.</p>`;
-      console.error(e);
-    }
-  })();
-</script>
-
+          // Limpieza
+          sessionStorage.removeItem("affirm_order_id");
+        } catch (e) {
+          statusEl.innerHTML = '<span class="error">Confirmado, pero hubo un error de red confirmando el pago.</span>';
+          debugEl.style.display = "block";
+          debugEl.textContent = JSON.stringify({ ok: false, step: "network", message: String(e && e.message ? e.message : e) }, null, 2);
+        }
+      })();
+    </script>
   </div>
 </body>
 </html>
