@@ -1,5 +1,10 @@
 // netlify/functions/affirm-authorize.js
 // Affirm API (v1 transactions): autoriza (create transaction) desde checkout_token y captura al instante.
+//
+// Espera:
+// - diag: true  => no llama a Affirm, devuelve estado env/keys
+// - ping: true  => llama a Affirm (list transactions), no consume checkout_token
+// - checkout_token + order_id + (capture=true => amount_cents requerido)
 
 const BASE = "https://api.affirm.com";
 const TXN = "/api/v1/transactions";
@@ -75,7 +80,6 @@ export async function handler(event) {
     }
 
     // Ping (sí llama a Affirm, pero NO consume checkout_token)
-    // Útil si no querés gastar tokens: valida credenciales y conectividad.
     if (body && body.ping === true) {
       const AUTH = getAuthHeader();
       if (!AUTH) {
@@ -195,7 +199,7 @@ export async function handler(event) {
       };
     }
 
-    // 2) CAPTURE (opcional)
+    // 2) CAPTURE
     let captureJson = null;
 
     if (capture) {

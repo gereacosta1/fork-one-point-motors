@@ -224,59 +224,11 @@ export default function AffirmButton({
 
   const merchantBase = useMemo(() => window.location.origin, []);
 
-  const getAffirmCallbacks = (orderId: string) => ({
-    onSuccess: async (res: { checkout_token: string }) => {
-      try {
-        // Backend autoriza + captura (no mandamos amount_cents)
-        const r = await fetch("/.netlify/functions/affirm-authorize", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            checkout_token: res.checkout_token,
-            order_id: orderId,
-            capture: true,
-          }),
-        });
-
-        const t = await r.text();
-        let data: any;
-        try {
-          data = t ? JSON.parse(t) : null;
-        } catch {
-          data = { raw: t };
-        }
-
-        console.log("affirm-authorize →", { ok: r.ok, status: r.status, data });
-
-        if (!r.ok || !data?.ok) {
-          setModal({
-            open: true,
-            title: "Affirm aprobó, pero no se pudo capturar",
-            body:
-              "El cliente fue aprobado, pero el servidor devolvió error en authorize/capture. Revisá Logs de Netlify (Functions) y lo ajusto.",
-            retry: false,
-          });
-          return;
-        }
-
-        showToast("success", "Listo: aprobado y capturado.");
-
-        // Limpieza por si Affirm redirige al confirm.html igual
-        try {
-          sessionStorage.removeItem("affirm_order_id");
-        } catch {}
-      } catch (e) {
-        console.warn("Falló llamada a función:", e);
-        setModal({
-          open: true,
-          title: "No pudimos confirmar tu solicitud",
-          body:
-            "Tuvimos un problema al confirmar con nuestro servidor. Intentá nuevamente.",
-          retry: false,
-        });
-      } finally {
-        setOpening(false);
-      }
+  const getAffirmCallbacks = () => ({
+    onSuccess: () => {
+      // La captura real ocurre en /affirm/confirm.html
+      setOpening(false);
+      showToast("success", "Solicitud enviada. Confirmando…");
     },
 
     onFail: (err: any) => {
@@ -327,7 +279,7 @@ export default function AffirmButton({
     const affirm = (window as any).affirm;
     try {
       affirm.checkout(lastCheckoutPayload);
-      affirm.checkout.open(getAffirmCallbacks(lastCheckoutPayload.order_id));
+      affirm.checkout.open(getAffirmCallbacks());
     } catch (e) {
       console.error("Reintento falló:", e);
       showToast("error", "No se pudo reintentar el pago.");
@@ -385,9 +337,10 @@ export default function AffirmButton({
 
     const orderId = `ORDER-${Date.now()}`;
 
-    // CLAVE: si Affirm redirige a confirm.html, ahí necesitan order_id.
+    // CLAVE: confirm.html necesita order_id + amount_cents para capturar.
     try {
       sessionStorage.setItem("affirm_order_id", orderId);
+      sessionStorage.setItem("affirm_amount_cents", String(totalCents));
     } catch {}
 
     const billing = { name: FALLBACK_NAME, address: FALLBACK_ADDR };
@@ -415,7 +368,7 @@ export default function AffirmButton({
 
     try {
       affirm.checkout(checkout);
-      affirm.checkout.open(getAffirmCallbacks(orderId));
+      affirm.checkout.open(getAffirmCallbacks());
     } catch (e) {
       console.error("Error al abrir Affirm:", e);
       setOpening(false);
