@@ -1,10 +1,5 @@
 // netlify/functions/affirm-authorize.js
 // Affirm API (v1 transactions): autoriza (create transaction) desde checkout_token y captura al instante.
-//
-// Espera:
-// - diag: true  => no llama a Affirm, devuelve estado env/keys
-// - ping: true  => llama a Affirm (list transactions), no consume checkout_token
-// - checkout_token + order_id + (capture=true => amount_cents requerido)
 
 const BASE = "https://api.affirm.com";
 const TXN = "/api/v1/transactions";
@@ -79,7 +74,9 @@ export async function handler(event) {
       };
     }
 
-    // Ping (sí llama a Affirm, pero NO consume checkout_token)
+    // Ping (sí llama a Affirm, NO consume checkout_token)
+    // OJO: Affirm empezó a exigir transaction_type para list transactions.
+    // Default: "charge" (según docs: “Returns a list of charge type transactions.”)
     if (body && body.ping === true) {
       const AUTH = getAuthHeader();
       if (!AUTH) {
@@ -93,7 +90,16 @@ export async function handler(event) {
         };
       }
 
-      const r = await doFetch(`${BASE}${TXN}?limit=1`, {
+      const transaction_type =
+        typeof body.transaction_type === "string" && body.transaction_type.trim()
+          ? body.transaction_type.trim()
+          : "charge";
+
+      const url = `${BASE}${TXN}?transaction_type=${encodeURIComponent(
+        transaction_type
+      )}&limit=1`;
+
+      const r = await doFetch(url, {
         method: "GET",
         headers: { Authorization: AUTH },
       });
@@ -108,6 +114,7 @@ export async function handler(event) {
 
       console.log("[affirm][ping][list transactions]", {
         status: r.status,
+        transaction_type,
         resp: safe(data),
       });
 
@@ -199,7 +206,7 @@ export async function handler(event) {
       };
     }
 
-    // 2) CAPTURE
+    // 2) CAPTURE (opcional)
     let captureJson = null;
 
     if (capture) {
