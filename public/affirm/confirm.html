@@ -14,12 +14,9 @@
       pre { background:#0f0f0f; border:1px solid #272727; border-radius:12px; padding:12px; overflow:auto; color:#e5e7eb; }
       .error { color:#f87171; }
       .success { color:#34d399; }
-      .btn {
-        display:inline-block; margin-top:12px;
-        padding:10px 14px; border-radius:12px;
-        background:#1b1b1b; border:1px solid #2a2a2a;
-        color:#fff; text-decoration:none;
-      }
+      button { margin-top:12px; background:#222; border:1px solid #333; color:#fff; padding:10px 14px; border-radius:10px; cursor:pointer; }
+      button:hover { background:#2a2a2a; }
+      code { color:#e5e7eb; }
     </style>
   </head>
   <body>
@@ -32,8 +29,8 @@
       <p><a href="/">Volver a ONE POINT MOTORS</a></p>
 
       <div id="status" class="hint">Procesando confirmación…</div>
+      <button id="retryBtn" style="display:none">Reintentar</button>
       <pre id="debug" style="display:none"></pre>
-      <a id="retryBtn" class="btn" href="#" style="display:none">Reintentar</a>
 
       <script>
         (async () => {
@@ -46,7 +43,61 @@
             debugEl.textContent = JSON.stringify(obj, null, 2);
           };
 
+          // Función base: por defecto mismo origin
+          const buildFunctionUrlCandidates = () => {
+            const path = "/.netlify/functions/affirm-authorize";
+            const candidates = [path];
+
+            // Fallback: si estamos en www., reintentamos contra el host sin www
+            try {
+              const host = location.hostname || "";
+              if (host.startsWith("www.")) {
+                const bare = host.replace(/^www\./, "");
+                candidates.push(`${location.protocol}//${bare}${path}`);
+              }
+            } catch {}
+
+            return candidates;
+          };
+
+          const postJson = async (url, payload) => {
+            const r = await fetch(url, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(payload),
+            });
+            const data = await r.json().catch(() => ({}));
+            return { ok: r.ok, status: r.status, data, urlUsed: url };
+          };
+
+          const callWithFallback = async (payload) => {
+            const urls = buildFunctionUrlCandidates();
+
+            let last = null;
+            for (const url of urls) {
+              const res = await postJson(url, payload);
+
+              // Si funcionó, devolvemos
+              if (res.ok && res.data && res.data.ok) return res;
+
+              // Si es 404, probamos el siguiente candidato (muy típico en www vs apex)
+              if (res.status === 404) {
+                last = res;
+                continue;
+              }
+
+              // Para otros errores (400/401/500), no tiene sentido “cambiar de host”:
+              // devolvemos para mostrar el error real.
+              last = res;
+              break;
+            }
+
+            return last;
+          };
+
           const q = new URLSearchParams(location.search);
+
+          // Token puede venir en query o guardado
           const checkout_token = q.get("checkout_token") || sessionStorage.getItem("affirm_checkout_token");
 
           const order_id = sessionStorage.getItem("affirm_order_id");
@@ -55,79 +106,70 @@
 
           const captured_order_id = sessionStorage.getItem("affirm_captured_order_id");
 
-          // Sin token: la página igual sirve (pero no puede cerrar el pago)
-          if (!checkout_token) {
-            statusEl.textContent = "Confirmación recibida.";
-            return;
-          }
-
-          // Evita doble capture si ya capturaste en onSuccess
-          if (captured_order_id && order_id && captured_order_id === order_id) {
-            statusEl.innerHTML = '<span class="success">Confirmación completada.</span>';
+          const cleanup = () => {
             try {
               sessionStorage.removeItem("affirm_order_id");
               sessionStorage.removeItem("affirm_order_amount_cents");
               sessionStorage.removeItem("affirm_checkout_token");
               sessionStorage.removeItem("affirm_captured_order_id");
             } catch {}
-            return;
-          }
-
-          // Si faltan datos locales, no se puede capturar
-          if (!order_id || !Number.isFinite(amount_cents) || amount_cents <= 0) {
-            statusEl.innerHTML = '<span class="error">Confirmado, pero faltó información local para cerrar el pago.</span>';
-            showDebug({
-              ok: false,
-              step: "confirm.html",
-              error: "missing_order_id_or_amount",
-              has_checkout_token: Boolean(checkout_token),
-              has_order_id: Boolean(order_id),
-              amount_cents_raw
-            });
-            return;
-          }
-
-          const run = async () => {
-            statusEl.textContent = "Cerrando el pago con Affirm…";
-            retryBtn.style.display = "none";
-            debugEl.style.display = "none";
-
-            try {
-              const r = await fetch("/.netlify/functions/affirm-authorize", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ checkout_token, order_id, amount_cents, capture: true }),
-              });
-
-              const data = await r.json().catch(() => ({}));
-
-              if (!r.ok || !data.ok) {
-                statusEl.innerHTML = '<span class="error">Confirmado, pero hubo un error cerrando el pago.</span>';
-                showDebug({ ok: false, status: r.status, step: "affirm-authorize", response: data });
-                retryBtn.style.display = "inline-block";
-                return;
-              }
-
-              statusEl.innerHTML = '<span class="success">Confirmación completada.</span>';
-
-              try {
-                sessionStorage.removeItem("affirm_order_id");
-                sessionStorage.removeItem("affirm_order_amount_cents");
-                sessionStorage.removeItem("affirm_checkout_token");
-                sessionStorage.removeItem("affirm_captured_order_id");
-              } catch {}
-            } catch (e) {
-              statusEl.innerHTML = '<span class="error">Confirmado, pero hubo un error de red confirmando el pago.</span>';
-              showDebug({ ok: false, step: "network", message: String(e && e.message ? e.message : e) });
-              retryBtn.style.display = "inline-block";
-            }
           };
 
-          retryBtn.addEventListener("click", (ev) => {
-            ev.preventDefault();
-            run();
-          });
+          const run = async () => {
+            retryBtn.style.display = "none";
+            debugEl.style.display = "none";
+            debugEl.textContent = "";
+            statusEl.textContent = "Procesando confirmación…";
 
+            // Si no hay token, esta página se puede abrir igual, pero no hay nada para cerrar.
+            if (!checkout_token) {
+              statusEl.innerHTML = '<span class="success">Confirmación recibida.</span>';
+              return;
+            }
+
+            // Evitar doble-capture si ya se hizo en onSuccess
+            if (captured_order_id && order_id && captured_order_id === order_id) {
+              statusEl.innerHTML = '<span class="success">Confirmación completada.</span>';
+              cleanup();
+              return;
+            }
+
+            // Si falta info local, no podemos capturar (esto se arregla asegurando que onSuccess guarde order/amount)
+            if (!order_id || !Number.isFinite(amount_cents) || amount_cents <= 0) {
+              statusEl.innerHTML = '<span class="error">Confirmado, pero faltó información local para cerrar el pago.</span>';
+              showDebug({
+                ok: false,
+                step: "confirm.html",
+                error: "missing_order_id_or_amount",
+                has_order_id: Boolean(order_id),
+                amount_cents_raw,
+                hint: "Asegurate de guardar affirm_order_id y affirm_order_amount_cents en sessionStorage antes de redirigir a /affirm/confirm.html",
+              });
+              return;
+            }
+
+            // Llamada real a tu Netlify Function (con fallback www -> apex)
+            const result = await callWithFallback({ checkout_token, order_id, amount_cents, capture: true });
+
+            if (!result || !result.data || !result.data.ok) {
+              statusEl.innerHTML = '<span class="error">Confirmado, pero hubo un error cerrando el pago.</span>';
+              retryBtn.style.display = "inline-block";
+              showDebug({
+                ok: false,
+                step: "affirm-authorize",
+                status: result ? result.status : null,
+                urlUsed: result ? result.urlUsed : null,
+                response: result ? result.data : null,
+                note: "Si ves status 404 y urlUsed apunta a www, el fallback debería probar el dominio sin www. Si sigue 404, tu www no está sirviendo desde el mismo Netlify Site.",
+              });
+              return;
+            }
+
+            statusEl.innerHTML = '<span class="success">Confirmación completada.</span>';
+            cleanup();
+          };
+
+          retryBtn.addEventListener("click", run);
           await run();
         })();
       </script>
