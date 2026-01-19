@@ -1,4 +1,3 @@
-// src/components/AffirmButton.tsx
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { loadAffirm } from "../lib/affirm";
 
@@ -19,9 +18,6 @@ type Props = {
 };
 
 const MIN_TOTAL_CENTS = 5000; // $50
-
-const isFiniteNumber = (n: unknown): n is number =>
-  typeof n === "number" && Number.isFinite(n);
 
 const toCents = (usd: unknown) => Math.round((Number(usd) || 0) * 100);
 
@@ -90,19 +86,11 @@ function NiceModal({
   if (!open) return null;
   return (
     <div className="fixed inset-0 z-[9998] flex items-center justify-center p-4">
-      <div
-        className="absolute inset-0 bg-black/70 backdrop-blur-sm"
-        onClick={onClose}
-      />
+      <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
       <div className="relative w-[95%] max-w-md rounded-2xl bg-black/95 border border-brand/40 shadow-2xl p-6">
         <div className="flex items-start justify-between mb-3">
           <h3 className="text-xl font-black text-white">{title}</h3>
-          <button
-            onClick={onClose}
-            className="text-white/70 hover:text-white transition"
-            aria-label="Close"
-            title="Close"
-          >
+          <button onClick={onClose} className="text-white/70 hover:text-white transition" aria-label="Close" title="Close">
             ✕
           </button>
         </div>
@@ -133,38 +121,29 @@ function NiceModal({
   );
 }
 
-export default function AffirmButton({
-  cartItems,
-  totalUSD,
-  shippingUSD = 0,
-  taxUSD = 0,
-}: Props) {
+export default function AffirmButton({ cartItems, totalUSD, shippingUSD = 0, taxUSD = 0 }: Props) {
   const PUBLIC_KEY = import.meta.env.VITE_AFFIRM_PUBLIC_KEY || "";
 
   const [ready, setReady] = useState(false);
   const [opening, setOpening] = useState(false);
 
-  const [toast, setToast] = useState<{
-    show: boolean;
-    type: "success" | "error" | "info";
-    message: string;
-  }>({ show: false, type: "info", message: "" });
+  const [toast, setToast] = useState<{ show: boolean; type: "success" | "error" | "info"; message: string }>({
+    show: false,
+    type: "info",
+    message: "",
+  });
 
-  const showToast = (
-    type: "success" | "error" | "info",
-    message: string,
-    ms = 2500
-  ) => {
+  const showToast = (type: "success" | "error" | "info", message: string, ms = 2500) => {
     setToast({ show: true, type, message });
     window.setTimeout(() => setToast((s) => ({ ...s, show: false })), ms);
   };
 
-  const [modal, setModal] = useState<{
-    open: boolean;
-    title: string;
-    body: string;
-    retry?: boolean;
-  }>({ open: false, title: "", body: "", retry: false });
+  const [modal, setModal] = useState<{ open: boolean; title: string; body: string; retry?: boolean }>({
+    open: false,
+    title: "",
+    body: "",
+    retry: false,
+  });
 
   const [lastCheckoutPayload, setLastCheckoutPayload] = useState<any>(null);
   const [lastTotalCents, setLastTotalCents] = useState<number>(0);
@@ -197,15 +176,10 @@ export default function AffirmButton({
 
     return itemsIn
       .map((it, idx) => {
-        const display_name = (it.name || `Item ${idx + 1}`)
-          .toString()
-          .slice(0, 120);
-        const unit_price = Math.round(Number(it.price) * 100);
+        const display_name = (it.name || `Item ${idx + 1}`).toString().slice(0, 120);
+        const unit_price = Math.round(Number(it.price) * 100); // cents
         const qty = Math.max(1, Math.trunc(Number(it.qty) || 1));
-        const sku = (it.sku ?? `SKU-${idx + 1}`)
-          .toString()
-          .replace(/\s+/g, "-")
-          .slice(0, 64);
+        const sku = (it.sku ?? `SKU-${idx + 1}`).toString().replace(/\s+/g, "-").slice(0, 64);
 
         const item: any = {
           display_name,
@@ -220,7 +194,7 @@ export default function AffirmButton({
 
         return item;
       })
-      .filter((x) => x.display_name && x.unit_price > 0 && x.qty > 0);
+      .filter((x) => x.display_name && Number.isFinite(x.unit_price) && x.unit_price > 0 && Number.isFinite(x.qty) && x.qty > 0);
   };
 
   const merchantBase = useMemo(() => window.location.origin, []);
@@ -228,8 +202,13 @@ export default function AffirmButton({
   const getAffirmCallbacks = (orderId: string, totalCents: number) => ({
     onSuccess: async (res: { checkout_token: string }) => {
       try {
-        // Backend autoriza + captura
-        // IMPORTANTE: tu function exige amount_cents para capturar.
+        // Guardamos para fallback (confirm.html) si Affirm redirige
+        try {
+          sessionStorage.setItem("affirm_order_id", orderId);
+          sessionStorage.setItem("affirm_order_amount_cents", String(totalCents));
+          sessionStorage.setItem("affirm_checkout_token", res.checkout_token);
+        } catch {}
+
         const r = await fetch("/.netlify/functions/affirm-authorize", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -254,28 +233,32 @@ export default function AffirmButton({
         if (!r.ok || !data?.ok) {
           setModal({
             open: true,
-            title: "Affirm aprobó, pero no se pudo capturar",
-            body:
-              "El cliente fue aprobado, pero el servidor devolvió error en authorize/capture. Revisá logs de Netlify (Functions).",
+            title: "Affirm aprobó, pero no se pudo cerrar el pago",
+            body: "El cliente fue aprobado, pero el servidor devolvió error en authorize/capture. Revisá Netlify Functions logs.",
             retry: false,
           });
           return;
         }
 
-        showToast("success", "Listo: aprobado y capturado.");
-
-        // Limpieza por si Affirm redirige igual a confirm.html
+        // Marcamos que ya capturó (para que confirm.html NO capture de nuevo)
         try {
-          sessionStorage.removeItem("affirm_order_id");
-          sessionStorage.removeItem("affirm_order_amount_cents");
+          sessionStorage.setItem("affirm_captured_order_id", orderId);
+        } catch {}
+
+        showToast("success", "Listo: aprobado y cobrado.");
+
+        // Limpieza
+        try {
+          sessionStorage.removeItem("affirm_checkout_token");
+          // Dejamos order_id/amount por un ratito por si el usuario refresca confirm.html
+          // y se limpia solo al final del confirm.html si entra.
         } catch {}
       } catch (e) {
         console.warn("Falló llamada a función:", e);
         setModal({
           open: true,
-          title: "No pudimos confirmar tu solicitud",
-          body:
-            "Tuvimos un problema al confirmar con nuestro servidor. Intentá nuevamente.",
+          title: "No pudimos confirmar el pago",
+          body: "Hubo un problema al confirmar con el servidor. Intentá nuevamente.",
           retry: false,
         });
       } finally {
@@ -298,26 +281,22 @@ export default function AffirmButton({
       console.warn("Affirm onValidationError", err);
       setOpening(false);
 
-      const fields =
-        err?.fields && Array.isArray(err.fields) ? err.fields.join(", ") : null;
+      const fields = err?.fields && Array.isArray(err.fields) ? err.fields.join(", ") : null;
 
       setModal({
         open: true,
         title: "Datos inválidos para Affirm",
-        body: fields
-          ? `Affirm rechazó el payload. Missing fields: ${fields}`
-          : "Revisá precio, total y datos mínimos requeridos.",
+        body: fields ? `Affirm rechazó el payload. Missing fields: ${fields}` : "Revisá precio, total y datos mínimos requeridos.",
         retry: false,
       });
     },
 
     onClose: () => {
-      console.log("Affirm modal cerrado por el usuario.");
       setOpening(false);
       setModal({
         open: true,
         title: "Proceso cancelado",
-        body: "No se realizó ningún cargo. ¿Querés intentarlo de nuevo?",
+        body: "No se realizó ningún cargo. Si querés, podés reintentar.",
         retry: true,
       });
     },
@@ -325,15 +304,12 @@ export default function AffirmButton({
 
   const handleRetry = () => {
     setModal({ open: false, title: "", body: "", retry: false });
-
     if (!lastCheckoutPayload) return;
 
     const affirm = (window as any).affirm;
     try {
       affirm.checkout(lastCheckoutPayload);
-      affirm.checkout.open(
-        getAffirmCallbacks(lastCheckoutPayload.order_id, lastTotalCents)
-      );
+      affirm.checkout.open(getAffirmCallbacks(lastCheckoutPayload.order_id, lastTotalCents));
     } catch (e) {
       console.error("Reintento falló:", e);
       showToast("error", "No se pudo reintentar el pago.");
@@ -343,7 +319,6 @@ export default function AffirmButton({
   const handleClick = () => {
     const affirm = (window as any).affirm;
     if (!affirm?.checkout) {
-      console.error("Affirm no está listo");
       showToast("error", "Affirm todavía no está listo.");
       return;
     }
@@ -352,34 +327,13 @@ export default function AffirmButton({
     const shippingCents = toCents(shippingUSD);
     const taxCents = toCents(taxUSD);
 
-    const invalids = items.filter(
-      (it: any) =>
-        !it.display_name ||
-        !isFiniteNumber(it.unit_price) ||
-        it.unit_price <= 0 ||
-        !isFiniteNumber(it.qty) ||
-        it.qty <= 0
-    );
-    if (invalids.length) {
-      console.warn("Items inválidos para Affirm:", invalids, { items });
-      showToast("error", "Precio o cantidad inválidos. Revisá el producto.");
-      return;
-    }
+    const sumItems = items.reduce((acc: number, it: any) => acc + it.unit_price * it.qty, 0);
 
-    const sumItems = items.reduce(
-      (acc: number, it: any) => acc + it.unit_price * it.qty,
-      0
-    );
+    const totalCentsFromProp = Number.isFinite(Number(totalUSD)) ? Math.round(Number(totalUSD) * 100) : NaN;
 
-    const totalCentsFromProp = isFiniteNumber(totalUSD)
-      ? Math.round(totalUSD * 100)
-      : NaN;
+    const totalCents = Number.isFinite(totalCentsFromProp) ? totalCentsFromProp : sumItems + shippingCents + taxCents;
 
-    const totalCents = isFiniteNumber(totalCentsFromProp)
-      ? totalCentsFromProp
-      : sumItems + shippingCents + taxCents;
-
-    if (!isFiniteNumber(totalCents) || totalCents < MIN_TOTAL_CENTS) {
+    if (!Number.isFinite(totalCents) || totalCents < MIN_TOTAL_CENTS) {
       setModal({
         open: true,
         title: "Importe no disponible para financiación",
@@ -391,10 +345,11 @@ export default function AffirmButton({
 
     const orderId = `ORDER-${Date.now()}`;
 
-    // CLAVE: si Affirm redirige a confirm.html, confirm.html necesita order_id + amount_cents.
+    // Guardamos lo mínimo para fallback
     try {
       sessionStorage.setItem("affirm_order_id", orderId);
       sessionStorage.setItem("affirm_order_amount_cents", String(totalCents));
+      sessionStorage.removeItem("affirm_captured_order_id");
     } catch {}
 
     const billing = { name: FALLBACK_NAME, address: FALLBACK_ADDR };
@@ -435,19 +390,11 @@ export default function AffirmButton({
   if (!ready) {
     return (
       <>
-        <button
-          disabled
-          className="bg-black/60 text-white px-5 py-3 rounded-xl border border-white/10"
-        >
+        <button disabled className="bg-black/60 text-white px-5 py-3 rounded-xl border border-white/10">
           Cargando Affirm…
         </button>
 
-        <Toast
-          show={toast.show}
-          type={toast.type}
-          message={toast.message}
-          onClose={() => setToast((s) => ({ ...s, show: false }))}
-        />
+        <Toast show={toast.show} type={toast.type} message={toast.message} onClose={() => setToast((s) => ({ ...s, show: false }))} />
       </>
     );
   }
@@ -468,12 +415,7 @@ export default function AffirmButton({
         {opening ? "Abriendo…" : "Pay with Affirm"}
       </button>
 
-      <Toast
-        show={toast.show}
-        type={toast.type}
-        message={toast.message}
-        onClose={() => setToast((s) => ({ ...s, show: false }))}
-      />
+      <Toast show={toast.show} type={toast.type} message={toast.message} onClose={() => setToast((s) => ({ ...s, show: false }))} />
 
       <NiceModal
         open={modal.open}

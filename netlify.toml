@@ -8,15 +8,14 @@
   external_node_modules = ["node-fetch"]
 
 [[redirects]]
-from = "/api/affirm-authorize"
-to = "/.netlify/functions/affirm-authorize"
-status = 200
+  from = "/api/affirm-authorize"
+  to = "/.netlify/functions/affirm-authorize"
+  status = 200
 
 [[redirects]]
   from = "/api/card-checkout"
   to = "/.netlify/functions/card-checkout"
   status = 200
-
 
 [[redirects]]
   from = "/*"

@@ -1,6 +1,3 @@
-// netlify/functions/affirm-authorize.js
-// Affirm API (v1 transactions): autoriza (create transaction) desde checkout_token y captura al instante.
-
 const BASE = "https://api.affirm.com";
 const TXN = "/api/v1/transactions";
 
@@ -27,10 +24,7 @@ const doFetch = async (...args) => {
 function getAuthHeader() {
   const PUB = process.env.AFFIRM_PUBLIC_KEY;
   const PRIV = process.env.AFFIRM_PRIVATE_KEY;
-
   if (!PUB || !PRIV) return null;
-
-  // Affirm usa Basic Auth: base64(PUBLIC:PRIVATE)
   return "Basic " + Buffer.from(`${PUB}:${PRIV}`).toString("base64");
 }
 
@@ -40,17 +34,12 @@ export async function handler(event) {
   }
 
   if (event.httpMethod !== "POST") {
-    return {
-      statusCode: 405,
-      headers: corsHeaders,
-      body: "Method Not Allowed",
-    };
+    return { statusCode: 405, headers: corsHeaders, body: "Method Not Allowed" };
   }
 
   try {
     const body = JSON.parse(event.body || "{}");
 
-    // Diagnóstico (no llama a Affirm)
     if (body && body.diag === true) {
       const diag = {
         nodeVersion: process.versions?.node || null,
@@ -74,19 +63,13 @@ export async function handler(event) {
       };
     }
 
-    // Ping (sí llama a Affirm, NO consume checkout_token)
-    // OJO: Affirm empezó a exigir transaction_type para list transactions.
-    // Default: "charge" (según docs: “Returns a list of charge type transactions.”)
     if (body && body.ping === true) {
       const AUTH = getAuthHeader();
       if (!AUTH) {
         return {
           statusCode: 500,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
-          body: JSON.stringify({
-            ok: false,
-            error: "Missing AFFIRM_PUBLIC_KEY or AFFIRM_PRIVATE_KEY env vars",
-          }),
+          body: JSON.stringify({ ok: false, error: "Missing AFFIRM_PUBLIC_KEY or AFFIRM_PRIVATE_KEY env vars" }),
         };
       }
 
@@ -95,14 +78,9 @@ export async function handler(event) {
           ? body.transaction_type.trim()
           : "charge";
 
-      const url = `${BASE}${TXN}?transaction_type=${encodeURIComponent(
-        transaction_type
-      )}&limit=1`;
+      const url = `${BASE}${TXN}?transaction_type=${encodeURIComponent(transaction_type)}&limit=1`;
 
-      const r = await doFetch(url, {
-        method: "GET",
-        headers: { Authorization: AUTH },
-      });
+      const r = await doFetch(url, { method: "GET", headers: { Authorization: AUTH } });
 
       const t = await r.text();
       let data;
@@ -112,11 +90,7 @@ export async function handler(event) {
         data = { raw: t };
       }
 
-      console.log("[affirm][ping][list transactions]", {
-        status: r.status,
-        transaction_type,
-        resp: safe(data),
-      });
+      console.log("[affirm][ping][list transactions]", { status: r.status, transaction_type, resp: safe(data) });
 
       return {
         statusCode: r.ok ? 200 : r.status,
@@ -138,10 +112,7 @@ export async function handler(event) {
       return {
         statusCode: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ok: false,
-          error: "Missing checkout_token or order_id",
-        }),
+        body: JSON.stringify({ ok: false, error: "Missing checkout_token or order_id" }),
       };
     }
 
@@ -150,20 +121,14 @@ export async function handler(event) {
       return {
         statusCode: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ok: false,
-          error: "Missing AFFIRM_PUBLIC_KEY or AFFIRM_PRIVATE_KEY env vars",
-        }),
+        body: JSON.stringify({ ok: false, error: "Missing AFFIRM_PUBLIC_KEY or AFFIRM_PRIVATE_KEY env vars" }),
       };
     }
 
-    // 1) AUTHORIZE (crea transaction) desde checkout_token
+    // 1) AUTHORIZE
     const authRes = await doFetch(`${BASE}${TXN}`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: AUTH,
-      },
+      headers: { "Content-Type": "application/json", Authorization: AUTH },
       body: JSON.stringify({ checkout_token }),
     });
 
@@ -175,20 +140,13 @@ export async function handler(event) {
       authJson = { raw: authText };
     }
 
-    console.log("[affirm][authorize][transactions]", {
-      status: authRes.status,
-      resp: safe(authJson),
-    });
+    console.log("[affirm][authorize][transactions]", { status: authRes.status, order_id, resp: safe(authJson) });
 
     if (!authRes.ok) {
       return {
         statusCode: authRes.status,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ok: false,
-          step: "authorize",
-          error: authJson,
-        }),
+        body: JSON.stringify({ ok: false, step: "authorize", error: authJson }),
       };
     }
 
@@ -197,48 +155,35 @@ export async function handler(event) {
       return {
         statusCode: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ok: false,
-          step: "authorize",
-          error: "Authorize succeeded but missing transaction id",
-          raw: authJson,
-        }),
+        body: JSON.stringify({ ok: false, step: "authorize", error: "Authorize succeeded but missing transaction id", raw: authJson }),
       };
     }
 
-    // 2) CAPTURE (opcional)
+    // 2) CAPTURE
     let captureJson = null;
 
     if (capture) {
       const amt = Number(amount_cents);
-      if (!Number.isFinite(amt) || amt <= 0 || !Number.isInteger(amt)) {
+      const okAmt = Number.isFinite(amt) && amt > 0 && Number.isInteger(amt);
+
+      if (!okAmt) {
         return {
           statusCode: 400,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
-          body: JSON.stringify({
-            ok: false,
-            step: "validate",
-            error: "amount_cents required (positive integer) when capture=true",
-          }),
+          body: JSON.stringify({ ok: false, step: "validate", error: "amount_cents required (positive integer) when capture=true" }),
         };
       }
 
-      const capRes = await doFetch(
-        `${BASE}${TXN}/${encodeURIComponent(transactionId)}/capture`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: AUTH,
-          },
-          body: JSON.stringify({
-            order_id,
-            amount: amt,
-            shipping_carrier,
-            shipping_confirmation,
-          }),
-        }
-      );
+      const capRes = await doFetch(`${BASE}${TXN}/${encodeURIComponent(transactionId)}/capture`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: AUTH },
+        body: JSON.stringify({
+          order_id,
+          amount: amt,
+          shipping_carrier,
+          shipping_confirmation,
+        }),
+      });
 
       const capText = await capRes.text();
       try {
@@ -247,21 +192,13 @@ export async function handler(event) {
         captureJson = { raw: capText };
       }
 
-      console.log("[affirm][capture][transactions]", {
-        status: capRes.status,
-        resp: safe(captureJson),
-      });
+      console.log("[affirm][capture][transactions]", { status: capRes.status, order_id, amount_cents: amt, transactionId, resp: safe(captureJson) });
 
       if (!capRes.ok) {
         return {
           statusCode: capRes.status,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
-          body: JSON.stringify({
-            ok: false,
-            step: "capture",
-            transaction_id: transactionId,
-            error: captureJson,
-          }),
+          body: JSON.stringify({ ok: false, step: "capture", transaction_id: transactionId, error: captureJson }),
         };
       }
     }
@@ -282,12 +219,7 @@ export async function handler(event) {
     return {
       statusCode: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        ok: false,
-        error: "server_error",
-        name: e?.name || null,
-        message: e?.message || null,
-      }),
+      body: JSON.stringify({ ok: false, error: "server_error", name: e?.name || null, message: e?.message || null }),
     };
   }
 }
