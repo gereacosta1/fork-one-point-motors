@@ -14,7 +14,12 @@
       pre { background:#0f0f0f; border:1px solid #272727; border-radius:12px; padding:12px; overflow:auto; color:#e5e7eb; }
       .error { color:#f87171; }
       .success { color:#34d399; }
-      .warn { color:#fbbf24; }
+      .btn {
+        display:inline-block; margin-top:12px;
+        padding:10px 14px; border-radius:12px;
+        background:#1b1b1b; border:1px solid #2a2a2a;
+        color:#fff; text-decoration:none;
+      }
     </style>
   </head>
   <body>
@@ -28,11 +33,13 @@
 
       <div id="status" class="hint">Procesando confirmación…</div>
       <pre id="debug" style="display:none"></pre>
+      <a id="retryBtn" class="btn" href="#" style="display:none">Reintentar</a>
 
       <script>
         (async () => {
           const statusEl = document.getElementById("status");
           const debugEl = document.getElementById("debug");
+          const retryBtn = document.getElementById("retryBtn");
 
           const showDebug = (obj) => {
             debugEl.style.display = "block";
@@ -40,100 +47,88 @@
           };
 
           const q = new URLSearchParams(location.search);
+          const checkout_token = q.get("checkout_token") || sessionStorage.getItem("affirm_checkout_token");
 
-          // 1) Token (preferimos querystring, pero soportamos storage también)
-          const tokenFromQuery = q.get("checkout_token");
-          const tokenFromSession = (() => { try { return sessionStorage.getItem("affirm_checkout_token"); } catch { return null; }})();
-          const tokenFromLocal = (() => { try { return localStorage.getItem("affirm_checkout_token"); } catch { return null; }})();
-
-          const checkout_token = tokenFromQuery || tokenFromSession || tokenFromLocal;
-
-          // 2) Datos del pedido (estos DEBEN haberse seteado ANTES de abrir Affirm)
-          const order_id = (() => { try { return sessionStorage.getItem("affirm_order_id") || localStorage.getItem("affirm_order_id"); } catch { return null; }})();
-          const amount_cents_raw = (() => { try { return sessionStorage.getItem("affirm_order_amount_cents") || localStorage.getItem("affirm_order_amount_cents"); } catch { return null; }})();
+          const order_id = sessionStorage.getItem("affirm_order_id");
+          const amount_cents_raw = sessionStorage.getItem("affirm_order_amount_cents");
           const amount_cents = Number(amount_cents_raw);
 
-          const captured_order_id = (() => { try { return sessionStorage.getItem("affirm_captured_order_id") || localStorage.getItem("affirm_captured_order_id"); } catch { return null; }})();
+          const captured_order_id = sessionStorage.getItem("affirm_captured_order_id");
 
-          // A) Si no hay token, no hay nada que autorizar/capturar
-          // Esto suele pasar si tu user_confirmation_url_action es POST y estás en un HTML estático:
-          // el browser navega, pero JS no puede leer el body del POST.
+          // Sin token: la página igual sirve (pero no puede cerrar el pago)
           if (!checkout_token) {
-            statusEl.innerHTML = '<span class="warn">Confirmación recibida, pero no se detectó checkout_token.</span>';
-            showDebug({
-              ok: false,
-              step: "confirm.html",
-              error: "missing_checkout_token",
-              hint: "Asegurate de enviar checkout_token por GET (user_confirmation_url_action='GET') o guardarlo en storage via onSuccess.",
-              tokenFromQuery: Boolean(tokenFromQuery),
-              tokenFromSession: Boolean(tokenFromSession),
-              tokenFromLocal: Boolean(tokenFromLocal),
-            });
+            statusEl.textContent = "Confirmación recibida.";
             return;
           }
 
-          // B) Si ya capturaste en onSuccess, evitamos doble capture
+          // Evita doble capture si ya capturaste en onSuccess
           if (captured_order_id && order_id && captured_order_id === order_id) {
-            statusEl.innerHTML = '<span class="success">Confirmación completada (ya capturado en onSuccess).</span>';
+            statusEl.innerHTML = '<span class="success">Confirmación completada.</span>';
             try {
               sessionStorage.removeItem("affirm_order_id");
               sessionStorage.removeItem("affirm_order_amount_cents");
               sessionStorage.removeItem("affirm_checkout_token");
               sessionStorage.removeItem("affirm_captured_order_id");
-              localStorage.removeItem("affirm_order_id");
-              localStorage.removeItem("affirm_order_amount_cents");
-              localStorage.removeItem("affirm_checkout_token");
-              localStorage.removeItem("affirm_captured_order_id");
             } catch {}
             return;
           }
 
-          // C) Validación de datos locales del pedido
+          // Si faltan datos locales, no se puede capturar
           if (!order_id || !Number.isFinite(amount_cents) || amount_cents <= 0) {
             statusEl.innerHTML = '<span class="error">Confirmado, pero faltó información local para cerrar el pago.</span>';
             showDebug({
               ok: false,
               step: "confirm.html",
               error: "missing_order_id_or_amount",
+              has_checkout_token: Boolean(checkout_token),
               has_order_id: Boolean(order_id),
-              amount_cents_raw,
-              checkout_token_present: true,
+              amount_cents_raw
             });
             return;
           }
 
-          // D) Autorizar + Capturar en tu backend (Netlify Function)
-          try {
-            const r = await fetch("/.netlify/functions/affirm-authorize", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ checkout_token, order_id, amount_cents, capture: true }),
-            });
-
-            const data = await r.json().catch(() => ({}));
-
-            if (!r.ok || !data.ok) {
-              statusEl.innerHTML = '<span class="error">Confirmado, pero hubo un error cerrando el pago.</span>';
-              showDebug({ ok: false, status: r.status, step: "affirm-authorize", response: data });
-              return;
-            }
-
-            statusEl.innerHTML = '<span class="success">Confirmación completada.</span>';
+          const run = async () => {
+            statusEl.textContent = "Cerrando el pago con Affirm…";
+            retryBtn.style.display = "none";
+            debugEl.style.display = "none";
 
             try {
-              sessionStorage.removeItem("affirm_order_id");
-              sessionStorage.removeItem("affirm_order_amount_cents");
-              sessionStorage.removeItem("affirm_checkout_token");
-              sessionStorage.removeItem("affirm_captured_order_id");
-              localStorage.removeItem("affirm_order_id");
-              localStorage.removeItem("affirm_order_amount_cents");
-              localStorage.removeItem("affirm_checkout_token");
-              localStorage.removeItem("affirm_captured_order_id");
-            } catch {}
-          } catch (e) {
-            statusEl.innerHTML = '<span class="error">Confirmado, pero hubo un error de red confirmando el pago.</span>';
-            showDebug({ ok: false, step: "network", message: String(e && e.message ? e.message : e) });
-          }
+              const r = await fetch("/.netlify/functions/affirm-authorize", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ checkout_token, order_id, amount_cents, capture: true }),
+              });
+
+              const data = await r.json().catch(() => ({}));
+
+              if (!r.ok || !data.ok) {
+                statusEl.innerHTML = '<span class="error">Confirmado, pero hubo un error cerrando el pago.</span>';
+                showDebug({ ok: false, status: r.status, step: "affirm-authorize", response: data });
+                retryBtn.style.display = "inline-block";
+                return;
+              }
+
+              statusEl.innerHTML = '<span class="success">Confirmación completada.</span>';
+
+              try {
+                sessionStorage.removeItem("affirm_order_id");
+                sessionStorage.removeItem("affirm_order_amount_cents");
+                sessionStorage.removeItem("affirm_checkout_token");
+                sessionStorage.removeItem("affirm_captured_order_id");
+              } catch {}
+            } catch (e) {
+              statusEl.innerHTML = '<span class="error">Confirmado, pero hubo un error de red confirmando el pago.</span>';
+              showDebug({ ok: false, step: "network", message: String(e && e.message ? e.message : e) });
+              retryBtn.style.display = "inline-block";
+            }
+          };
+
+          retryBtn.addEventListener("click", (ev) => {
+            ev.preventDefault();
+            run();
+          });
+
+          await run();
         })();
       </script>
     </div>
