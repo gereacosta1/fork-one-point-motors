@@ -23,18 +23,25 @@ export type Customer = {
     line1?: string;
     city?: string;
     state?: string;
+    // soportamos ambos para compatibilidad:
     zip?: string;
+    zipcode?: string;
     country?: string;
   };
 };
 
-const toCents = (usd = 0) => Math.round((Number(usd) || 0) * 100);
+const toCents = (usd = 0) => {
+  const n = Number(usd);
+  if (!Number.isFinite(n)) return 0;
+  return Math.max(0, Math.round(n * 100));
+};
 
+// ✅ Nueva dirección
 const FALLBACK_ADDR = {
-  line1: "297 NW 54th St",
+  line1: "821 NE 79th St",
   city: "Miami",
   state: "FL",
-  zipcode: "33127",
+  zipcode: "33138",
   country: "US",
 };
 
@@ -52,14 +59,18 @@ function buildNameAndAddress(c?: Customer) {
     first: (c?.firstName || "Online").trim(),
     last: (c?.lastName || "Customer").trim(),
   };
+
   const a = c?.address || {};
+  const zipLike = (a.zipcode ?? a.zip)?.trim();
+
   const address = {
     line1: a.line1?.trim() || FALLBACK_ADDR.line1,
     city: a.city?.trim() || FALLBACK_ADDR.city,
     state: a.state?.trim() || FALLBACK_ADDR.state,
-    zipcode: a.zip?.trim() || FALLBACK_ADDR.zipcode,
+    zipcode: zipLike || FALLBACK_ADDR.zipcode,
     country: a.country?.trim() || FALLBACK_ADDR.country,
   };
+
   return { name, address };
 }
 

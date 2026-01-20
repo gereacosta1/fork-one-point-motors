@@ -86,8 +86,7 @@
                 continue;
               }
 
-              // Para otros errores (400/401/500), no tiene sentido “cambiar de host”:
-              // devolvemos para mostrar el error real.
+              // Para otros errores (400/401/500), devolvemos el error real.
               last = res;
               break;
             }
@@ -98,8 +97,10 @@
           const q = new URLSearchParams(location.search);
 
           // Token puede venir en query o guardado
-          const checkout_token = q.get("checkout_token") || sessionStorage.getItem("affirm_checkout_token");
+          const checkout_token =
+            q.get("checkout_token") || sessionStorage.getItem("affirm_checkout_token");
 
+          // Estos nombres están alineados con AffirmButton.tsx
           const order_id = sessionStorage.getItem("affirm_order_id");
           const amount_cents_raw = sessionStorage.getItem("affirm_order_amount_cents");
           const amount_cents = Number(amount_cents_raw);
@@ -112,6 +113,8 @@
               sessionStorage.removeItem("affirm_order_amount_cents");
               sessionStorage.removeItem("affirm_checkout_token");
               sessionStorage.removeItem("affirm_captured_order_id");
+              // Si te quedó algún key viejo de otro componente, lo limpiamos también:
+              sessionStorage.removeItem("affirm_amount_cents");
             } catch {}
           };
 
@@ -122,8 +125,10 @@
             statusEl.textContent = "Procesando confirmación…";
 
             // Si no hay token, esta página se puede abrir igual, pero no hay nada para cerrar.
+            // Igual limpiamos storage por si quedó algo residual.
             if (!checkout_token) {
               statusEl.innerHTML = '<span class="success">Confirmación recibida.</span>';
+              cleanup();
               return;
             }
 
@@ -134,25 +139,33 @@
               return;
             }
 
-            // Si falta info local, no podemos capturar (esto se arregla asegurando que onSuccess guarde order/amount)
+            // Si falta info local, no podemos capturar
             if (!order_id || !Number.isFinite(amount_cents) || amount_cents <= 0) {
-              statusEl.innerHTML = '<span class="error">Confirmado, pero faltó información local para cerrar el pago.</span>';
+              statusEl.innerHTML =
+                '<span class="error">Confirmado, pero faltó información local para cerrar el pago.</span>';
               showDebug({
                 ok: false,
                 step: "confirm.html",
                 error: "missing_order_id_or_amount",
                 has_order_id: Boolean(order_id),
                 amount_cents_raw,
-                hint: "Asegurate de guardar affirm_order_id y affirm_order_amount_cents en sessionStorage antes de redirigir a /affirm/confirm.html",
+                hint:
+                  "Asegurate de guardar affirm_order_id y affirm_order_amount_cents en sessionStorage antes de redirigir a /affirm/confirm.html",
               });
               return;
             }
 
             // Llamada real a tu Netlify Function (con fallback www -> apex)
-            const result = await callWithFallback({ checkout_token, order_id, amount_cents, capture: true });
+            const result = await callWithFallback({
+              checkout_token,
+              order_id,
+              amount_cents,
+              capture: true,
+            });
 
             if (!result || !result.data || !result.data.ok) {
-              statusEl.innerHTML = '<span class="error">Confirmado, pero hubo un error cerrando el pago.</span>';
+              statusEl.innerHTML =
+                '<span class="error">Confirmado, pero hubo un error cerrando el pago.</span>';
               retryBtn.style.display = "inline-block";
               showDebug({
                 ok: false,
@@ -160,7 +173,8 @@
                 status: result ? result.status : null,
                 urlUsed: result ? result.urlUsed : null,
                 response: result ? result.data : null,
-                note: "Si ves status 404 y urlUsed apunta a www, el fallback debería probar el dominio sin www. Si sigue 404, tu www no está sirviendo desde el mismo Netlify Site.",
+                note:
+                  "Si ves status 404 y urlUsed apunta a www, el fallback debería probar el dominio sin www. Si sigue 404, tu www no está sirviendo desde el mismo Netlify Site.",
               });
               return;
             }

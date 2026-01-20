@@ -19,14 +19,20 @@ type Props = {
 
 const MIN_TOTAL_CENTS = 5000; // $50
 
-const toCents = (usd: unknown) => Math.round((Number(usd) || 0) * 100);
+const toCents = (usd: unknown) => {
+  const n = Number(usd);
+  if (!Number.isFinite(n)) return 0;
+  return Math.max(0, Math.round(n * 100));
+};
 
 const FALLBACK_NAME = { first: "Online", last: "Customer" };
+
+// ✅ Nueva dirección
 const FALLBACK_ADDR = {
-  line1: "297 NW 54th St",
+  line1: "821 NE 79th St",
   city: "Miami",
   state: "FL",
-  zipcode: "33127",
+  zipcode: "33138",
   country: "US",
 };
 
@@ -90,7 +96,12 @@ function NiceModal({
       <div className="relative w-[95%] max-w-md rounded-2xl bg-black/95 border border-brand/40 shadow-2xl p-6">
         <div className="flex items-start justify-between mb-3">
           <h3 className="text-xl font-black text-white">{title}</h3>
-          <button onClick={onClose} className="text-white/70 hover:text-white transition" aria-label="Close" title="Close">
+          <button
+            onClick={onClose}
+            className="text-white/70 hover:text-white transition"
+            aria-label="Close"
+            title="Close"
+          >
             ✕
           </button>
         </div>
@@ -177,7 +188,7 @@ export default function AffirmButton({ cartItems, totalUSD, shippingUSD = 0, tax
     return itemsIn
       .map((it, idx) => {
         const display_name = (it.name || `Item ${idx + 1}`).toString().slice(0, 120);
-        const unit_price = Math.round(Number(it.price) * 100); // cents
+        const unit_price = toCents(it.price); // cents ✅ consistente
         const qty = Math.max(1, Math.trunc(Number(it.qty) || 1));
         const sku = (it.sku ?? `SKU-${idx + 1}`).toString().replace(/\s+/g, "-").slice(0, 64);
 
@@ -194,7 +205,14 @@ export default function AffirmButton({ cartItems, totalUSD, shippingUSD = 0, tax
 
         return item;
       })
-      .filter((x) => x.display_name && Number.isFinite(x.unit_price) && x.unit_price > 0 && Number.isFinite(x.qty) && x.qty > 0);
+      .filter(
+        (x) =>
+          x.display_name &&
+          Number.isFinite(x.unit_price) &&
+          x.unit_price > 0 &&
+          Number.isFinite(x.qty) &&
+          x.qty > 0
+      );
   };
 
   const merchantBase = useMemo(() => window.location.origin, []);
@@ -394,7 +412,12 @@ export default function AffirmButton({ cartItems, totalUSD, shippingUSD = 0, tax
           Cargando Affirm…
         </button>
 
-        <Toast show={toast.show} type={toast.type} message={toast.message} onClose={() => setToast((s) => ({ ...s, show: false }))} />
+        <Toast
+          show={toast.show}
+          type={toast.type}
+          message={toast.message}
+          onClose={() => setToast((s) => ({ ...s, show: false }))}
+        />
       </>
     );
   }
@@ -415,7 +438,12 @@ export default function AffirmButton({ cartItems, totalUSD, shippingUSD = 0, tax
         {opening ? "Abriendo…" : "Pay with Affirm"}
       </button>
 
-      <Toast show={toast.show} type={toast.type} message={toast.message} onClose={() => setToast((s) => ({ ...s, show: false }))} />
+      <Toast
+        show={toast.show}
+        type={toast.type}
+        message={toast.message}
+        onClose={() => setToast((s) => ({ ...s, show: false }))}
+      />
 
       <NiceModal
         open={modal.open}

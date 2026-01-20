@@ -1,5 +1,5 @@
 import React from 'react';
-import { MapPin, Phone, Mail, Clock, MessageCircle } from 'lucide-react';
+import { MapPin, Phone, Clock, MessageCircle, Mail } from 'lucide-react';
 import UnderlineGrow from "../components/UnderlineGrow";
 import { useI18n } from "../i18n/I18nProvider";
 
@@ -118,12 +118,26 @@ const Contact: React.FC<ContactProps> = ({ onPhoneCall, onWhatsApp, onEmail }) =
     if (errors[name]) setErrors((prev) => ({ ...prev, [name]: '' }));
   };
 
+  // Nueva dirección
+  const STORE_ADDRESS_TEXT = '821 NE 79th St, Miami, FL 33138';
+
+  // Link que nos pasaste (share)
+  const STORE_MAPS_SHARE_URL = 'https://share.google/S1jEYSgtfeiZsDRw7';
+
+  // Fallback: búsqueda directa por dirección (por si cambia el share URL)
+  const STORE_MAPS_FALLBACK_URL =
+    'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(STORE_ADDRESS_TEXT);
+
   const handleGoogleMaps = () => {
-    window.open('https://maps.app.goo.gl/TVEdNoY3SyXYKEyU8', '_blank');
+    try {
+      window.open(STORE_MAPS_SHARE_URL, '_blank', 'noopener,noreferrer');
+    } catch {
+      window.open(STORE_MAPS_FALLBACK_URL, '_blank', 'noopener,noreferrer');
+    }
   };
 
   const contactInfo = [
-    { id: 'address', icon: MapPin, titleKey: 'contact.info.address', content: '297 Northwest 54th Street, Miami, FL 33127' },
+    { id: 'address', icon: MapPin, titleKey: 'contact.info.address', content: STORE_ADDRESS_TEXT },
     { id: 'phone',   icon: Phone,  titleKey: 'contact.info.phone',   content: '+1(786)2530995' },
     { id: 'email',   icon: Mail,   titleKey: 'contact.info.email',   content: 'onewaymotors2@gmail.com' },
     {

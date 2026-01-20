@@ -5,11 +5,12 @@ import { useI18n } from '../i18n/I18nProvider';
 const Footer: React.FC = () => {
   const { t } = useI18n();
 
+  // Si todavía no tenés los links reales, dejalos así (o actualizalos después)
   const socialLinks = [
-    { id: 'facebook',  icon: Facebook,  href: 'https://facebook.com/motocentral',  labelKey: 'social.facebook' },
-    { id: 'instagram', icon: Instagram, href: 'https://instagram.com/motocentral', labelKey: 'social.instagram' },
-    { id: 'twitter',   icon: Twitter,   href: 'https://twitter.com/motocentral',   labelKey: 'social.twitter' },
-    { id: 'youtube',   icon: Youtube,   href: 'https://youtube.com/motocentral',   labelKey: 'social.youtube' },
+    { id: 'facebook',  icon: Facebook,  href: 'https://facebook.com/',  labelKey: 'social.facebook' },
+    { id: 'instagram', icon: Instagram, href: 'https://instagram.com/', labelKey: 'social.instagram' },
+    { id: 'twitter',   icon: Twitter,   href: 'https://twitter.com/',   labelKey: 'social.twitter' },
+    { id: 'youtube',   icon: Youtube,   href: 'https://youtube.com/',   labelKey: 'social.youtube' },
   ] as const;
 
   const quickLinks = [
@@ -63,13 +64,17 @@ const Footer: React.FC = () => {
             >
               <div className="bg-brand-600 p-2 rounded-lg">
                 <img
-                  src="/IMG/One_Way_Motors_Logo-1.png"
-                  alt="Logo de SUNRISE STORE"
+                  src="/IMG/One_Point_Motors_Logo.png"
+                  alt="Logo de ONE POINT MOTORS"
                   className="w-10 h-10 object-contain rounded-lg"
+                  onError={(e) => {
+                    // fallback: si no existe el archivo nuevo, usa el que ya tenías
+                    (e.currentTarget as HTMLImageElement).src = "/IMG/One_Way_Motors_Logo-1.png";
+                  }}
                 />
               </div>
               <div>
-                <h3 className="text-2xl font-black text-white tracking-wide">SUNRISE STORE</h3>
+                <h3 className="text-2xl font-black text-white tracking-wide">ONE POINT MOTORS</h3>
                 <p className="text-lg text-brand-400 font-bold">{t('footer.tagline')}</p>
               </div>
             </button>
@@ -130,7 +135,7 @@ const Footer: React.FC = () => {
 
         <div className="border-t border-brand-600 mt-8 pt-8 flex flex-col md:flex-row justify-between items-center">
           <p className="text-white text-lg font-bold">
-            © {new Date().getFullYear()} SUNRISE STORE. {t('footer.rights')}
+            © {new Date().getFullYear()} ONE POINT MOTORS. {t('footer.rights')}
           </p>
           <div className="flex space-x-6 mt-4 md:mt-0">
             <button

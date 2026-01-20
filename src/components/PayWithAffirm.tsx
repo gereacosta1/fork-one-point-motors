@@ -3,7 +3,11 @@ import React, { useState } from 'react';
 import { useCart } from '../context/CartContext';
 import { loadAffirm } from '../lib/affirm';
 
-const toCents = (n: number) => Math.round(Number(n || 0) * 100);
+const toCents = (n: number) => {
+  const v = Number(n);
+  if (!Number.isFinite(v)) return 0;
+  return Math.max(0, Math.round(v * 100));
+};
 
 const toAbsUrl = (u?: string) => {
   if (!u) return undefined;
@@ -15,11 +19,13 @@ const toAbsUrl = (u?: string) => {
 };
 
 const FALLBACK_NAME = { first: 'Online', last: 'Customer' };
+
+// ✅ Nueva dirección
 const FALLBACK_ADDR = {
-  line1: '297 NW 54th St',
+  line1: '821 NE 79th St',
   city: 'Miami',
   state: 'FL',
-  zipcode: '33127',
+  zipcode: '33138',
   country: 'US',
 };
 
@@ -55,6 +61,12 @@ export default function PayWithAffirm() {
     setOpening(true);
     try {
       const PUBLIC_KEY = import.meta.env.VITE_AFFIRM_PUBLIC_KEY || '';
+      if (!PUBLIC_KEY) {
+        console.error('[Affirm] Falta VITE_AFFIRM_PUBLIC_KEY');
+        setOpening(false);
+        return;
+      }
+
       await loadAffirm(PUBLIC_KEY);
 
       const affirm = (window as any).affirm;
