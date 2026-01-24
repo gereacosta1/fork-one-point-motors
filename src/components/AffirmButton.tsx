@@ -1,3 +1,4 @@
+// src/components/AffirmButton.tsx
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { loadAffirm } from "../lib/affirm";
 
@@ -138,7 +139,11 @@ export default function AffirmButton({ cartItems, totalUSD, shippingUSD = 0, tax
   const [ready, setReady] = useState(false);
   const [opening, setOpening] = useState(false);
 
-  const [toast, setToast] = useState<{ show: boolean; type: "success" | "error" | "info"; message: string }>({
+  const [toast, setToast] = useState<{
+    show: boolean;
+    type: "success" | "error" | "info";
+    message: string;
+  }>({
     show: false,
     type: "info",
     message: "",
@@ -188,7 +193,7 @@ export default function AffirmButton({ cartItems, totalUSD, shippingUSD = 0, tax
     return itemsIn
       .map((it, idx) => {
         const display_name = (it.name || `Item ${idx + 1}`).toString().slice(0, 120);
-        const unit_price = toCents(it.price); // cents ✅ consistente
+        const unit_price = toCents(it.price);
         const qty = Math.max(1, Math.trunc(Number(it.qty) || 1));
         const sku = (it.sku ?? `SKU-${idx + 1}`).toString().replace(/\s+/g, "-").slice(0, 64);
 
@@ -217,71 +222,22 @@ export default function AffirmButton({ cartItems, totalUSD, shippingUSD = 0, tax
 
   const merchantBase = useMemo(() => window.location.origin, []);
 
+  // ✅ Capturamos SOLO en confirm.html: aquí solo guardamos token + redirigimos.
   const getAffirmCallbacks = (orderId: string, totalCents: number) => ({
-    onSuccess: async (res: { checkout_token: string }) => {
+    onSuccess: (res: { checkout_token: string }) => {
       try {
-        // Guardamos para fallback (confirm.html) si Affirm redirige
-        try {
-          sessionStorage.setItem("affirm_order_id", orderId);
-          sessionStorage.setItem("affirm_order_amount_cents", String(totalCents));
-          sessionStorage.setItem("affirm_checkout_token", res.checkout_token);
-        } catch {}
+        sessionStorage.setItem("affirm_order_id", orderId);
+        sessionStorage.setItem("affirm_order_amount_cents", String(totalCents));
+        sessionStorage.setItem("affirm_amount_cents", String(totalCents)); // compatibilidad opcional
+        sessionStorage.setItem("affirm_checkout_token", res.checkout_token);
+        sessionStorage.removeItem("affirm_captured_order_id");
+      } catch {}
 
-        const r = await fetch("/.netlify/functions/affirm-authorize", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            checkout_token: res.checkout_token,
-            order_id: orderId,
-            amount_cents: totalCents,
-            capture: true,
-          }),
-        });
+      // Redirección explícita para que confirm.html siempre tenga token
+      window.location.href = `/affirm/confirm.html?checkout_token=${encodeURIComponent(res.checkout_token)}`;
 
-        const t = await r.text();
-        let data: any;
-        try {
-          data = t ? JSON.parse(t) : null;
-        } catch {
-          data = { raw: t };
-        }
-
-        console.log("affirm-authorize →", { ok: r.ok, status: r.status, data });
-
-        if (!r.ok || !data?.ok) {
-          setModal({
-            open: true,
-            title: "Affirm aprobó, pero no se pudo cerrar el pago",
-            body: "El cliente fue aprobado, pero el servidor devolvió error en authorize/capture. Revisá Netlify Functions logs.",
-            retry: false,
-          });
-          return;
-        }
-
-        // Marcamos que ya capturó (para que confirm.html NO capture de nuevo)
-        try {
-          sessionStorage.setItem("affirm_captured_order_id", orderId);
-        } catch {}
-
-        showToast("success", "Listo: aprobado y cobrado.");
-
-        // Limpieza
-        try {
-          sessionStorage.removeItem("affirm_checkout_token");
-          // Dejamos order_id/amount por un ratito por si el usuario refresca confirm.html
-          // y se limpia solo al final del confirm.html si entra.
-        } catch {}
-      } catch (e) {
-        console.warn("Falló llamada a función:", e);
-        setModal({
-          open: true,
-          title: "No pudimos confirmar el pago",
-          body: "Hubo un problema al confirmar con el servidor. Intentá nuevamente.",
-          retry: false,
-        });
-      } finally {
-        setOpening(false);
-      }
+      // Nota: no hacemos setOpening(false) aquí porque navegamos; igualmente lo seteamos por prolijidad.
+      setOpening(false);
     },
 
     onFail: (err: any) => {
@@ -304,7 +260,9 @@ export default function AffirmButton({ cartItems, totalUSD, shippingUSD = 0, tax
       setModal({
         open: true,
         title: "Datos inválidos para Affirm",
-        body: fields ? `Affirm rechazó el payload. Missing fields: ${fields}` : "Revisá precio, total y datos mínimos requeridos.",
+        body: fields
+          ? `Affirm rechazó el payload. Missing fields: ${fields}`
+          : "Revisá precio, total y datos mínimos requeridos.",
         retry: false,
       });
     },
@@ -348,7 +306,6 @@ export default function AffirmButton({ cartItems, totalUSD, shippingUSD = 0, tax
     const sumItems = items.reduce((acc: number, it: any) => acc + it.unit_price * it.qty, 0);
 
     const totalCentsFromProp = Number.isFinite(Number(totalUSD)) ? Math.round(Number(totalUSD) * 100) : NaN;
-
     const totalCents = Number.isFinite(totalCentsFromProp) ? totalCentsFromProp : sumItems + shippingCents + taxCents;
 
     if (!Number.isFinite(totalCents) || totalCents < MIN_TOTAL_CENTS) {
@@ -363,10 +320,11 @@ export default function AffirmButton({ cartItems, totalUSD, shippingUSD = 0, tax
 
     const orderId = `ORDER-${Date.now()}`;
 
-    // Guardamos lo mínimo para fallback
+    // ✅ Guardamos lo mínimo para confirm.html (keys correctas)
     try {
       sessionStorage.setItem("affirm_order_id", orderId);
       sessionStorage.setItem("affirm_order_amount_cents", String(totalCents));
+      sessionStorage.setItem("affirm_amount_cents", String(totalCents)); // compatibilidad opcional
       sessionStorage.removeItem("affirm_captured_order_id");
     } catch {}
 
