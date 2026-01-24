@@ -43,21 +43,9 @@
             debugEl.textContent = JSON.stringify(obj, null, 2);
           };
 
-          // Función base: por defecto mismo origin
+          // ✅ SIEMPRE mismo origin (evita CORS/redirect entre www y apex)
           const buildFunctionUrlCandidates = () => {
-            const path = "/.netlify/functions/affirm-authorize";
-            const candidates = [path];
-
-            // Fallback: si estamos en www., reintentamos contra el host sin www
-            try {
-              const host = location.hostname || "";
-              if (host.startsWith("www.")) {
-                const bare = host.replace(/^www\./, "");
-                candidates.push(`${location.protocol}//${bare}${path}`);
-              }
-            } catch {}
-
-            return candidates;
+            return ["/.netlify/functions/affirm-authorize"];
           };
 
           const postJson = async (url, payload) => {
@@ -80,7 +68,7 @@
               // Si funcionó, devolvemos
               if (res.ok && res.data && res.data.ok) return res;
 
-              // Si es 404, probamos el siguiente candidato (muy típico en www vs apex)
+              // Si es 404, probamos el siguiente candidato (en este caso no debería ocurrir)
               if (res.status === 404) {
                 last = res;
                 continue;
@@ -155,7 +143,7 @@
               return;
             }
 
-            // Llamada real a tu Netlify Function (con fallback www -> apex)
+            // Llamada real a tu Netlify Function (mismo origin)
             const result = await callWithFallback({
               checkout_token,
               order_id,
@@ -174,7 +162,7 @@
                 urlUsed: result ? result.urlUsed : null,
                 response: result ? result.data : null,
                 note:
-                  "Si ves status 404 y urlUsed apunta a www, el fallback debería probar el dominio sin www. Si sigue 404, tu www no está sirviendo desde el mismo Netlify Site.",
+                  "Ahora siempre llamamos a la function en el mismo dominio (mismo origin) para evitar redirects/CORS entre www y apex.",
               });
               return;
             }
