@@ -99,7 +99,8 @@ export async function handler(event) {
         };
       }
 
-      const url = `${BASE}${TXN}?limit=1&transaction_type=capture`;
+      const url = `${BASE}${TXN}?limit=1&transaction_type=charge`;
+
       const r = await doFetch(url, { method: "GET", headers });
       const data = await readJson(r);
 
