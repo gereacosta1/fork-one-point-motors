@@ -17,7 +17,6 @@ const Header: React.FC<HeaderProps> = ({ activeSection, onNavigate }) => {
   const { open, items } = useCart();
   const cartCount = items.reduce((sum, it) => sum + it.qty, 0);
 
-  // IDs de sección iguales a tus anchors; keys de i18n para el label
   const menuItems: { id: string; labelKey: keyof (typeof import('../i18n/dict.es').default) }[] = [
     { id: 'inicio', labelKey: 'nav.home' },
     { id: 'catalogo', labelKey: 'nav.catalog' },
@@ -25,21 +24,24 @@ const Header: React.FC<HeaderProps> = ({ activeSection, onNavigate }) => {
     { id: 'contacto', labelKey: 'nav.contact' },
   ];
 
-  const handlePhoneCall = () => window.open('tel:+17862530995', '_self');
+  const phoneNumber = '7862530995';
+  const phoneHref = `tel:+1${phoneNumber}`;
+  const phoneDisplay = '+1(786)2530995';
+
+  const handlePhoneCall = () => window.open(phoneHref, '_self');
   const handleLogoClick = () => onNavigate('inicio');
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-black/85 backdrop-blur-md border-b border-brand-600">
       <div className="container mx-auto px-4 py-5">
         <div className="flex items-center justify-between">
-          {/* Logo */}
           <button
             onClick={handleLogoClick}
             className="flex items-center space-x-2 hover:scale-105 transition-transform duration-300"
           >
             <div className="bg-brand-600 p-2 rounded-lg">
               <img
-                src="/IMG/One_Way_Motors_Logo-1.png"  // coloca tu nuevo logo cuando lo tengas
+                src="/IMG/One_Way_Motors_Logo-1.png"
                 alt="One Point Motors Logo"
                 className="w-10 h-10 object-contain rounded-lg"
               />
@@ -50,7 +52,6 @@ const Header: React.FC<HeaderProps> = ({ activeSection, onNavigate }) => {
             </div>
           </button>
 
-          {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center space-x-8">
             {menuItems.map((item) => (
               <button
@@ -64,7 +65,6 @@ const Header: React.FC<HeaderProps> = ({ activeSection, onNavigate }) => {
               </button>
             ))}
 
-            {/* Botón Carrito (desktop) */}
             <button
               onClick={open}
               className="relative flex items-center gap-2 text-white hover:text-brand-300 transition-colors"
@@ -80,18 +80,16 @@ const Header: React.FC<HeaderProps> = ({ activeSection, onNavigate }) => {
               )}
             </button>
 
-            {/* Toggle idioma (desktop) */}
             <LangToggle />
           </nav>
 
-          {/* Contact + Info - Desktop */}
           <div className="hidden lg:flex items-center space-x-6 text-white">
             <button
               onClick={handlePhoneCall}
               className="flex items-center space-x-2 hover:text-brand-300 transition-colors duration-300"
             >
               <Phone className="w-4 h-4 text-brand-400" />
-              <span className="text-lg font-semibold">+1(786)2530995</span>
+              <span className="text-lg font-semibold">{phoneDisplay}</span>
             </button>
             <button
               onClick={() => onNavigate('contacto')}
@@ -102,9 +100,7 @@ const Header: React.FC<HeaderProps> = ({ activeSection, onNavigate }) => {
             </button>
           </div>
 
-          {/* Mobile Buttons */}
           <div className="md:hidden flex items-center space-x-4">
-            {/* Carrito (mobile) */}
             <button
               onClick={open}
               className="relative text-white hover:text-brand-300 transition-colors"
@@ -119,7 +115,6 @@ const Header: React.FC<HeaderProps> = ({ activeSection, onNavigate }) => {
               )}
             </button>
 
-            {/* Llamar (mobile) */}
             <button
               onClick={handlePhoneCall}
               className="flex items-center space-x-2 text-white hover:text-brand-300 transition-colors duration-300"
@@ -128,10 +123,8 @@ const Header: React.FC<HeaderProps> = ({ activeSection, onNavigate }) => {
               <span className="text-sm font-semibold">{t('contact.call')}</span>
             </button>
 
-            {/* Toggle idioma (mobile) */}
             <LangToggle />
 
-            {/* Menu toggle */}
             <button
               onClick={() => setIsMenuOpen(!isMenuOpen)}
               className="md:hidden text-white hover:text-brand-300 transition-colors"
@@ -142,7 +135,6 @@ const Header: React.FC<HeaderProps> = ({ activeSection, onNavigate }) => {
           </div>
         </div>
 
-        {/* Mobile Navigation */}
         {isMenuOpen && (
           <div className="md:hidden mt-4 pb-4 border-t border-brand-600">
             <nav className="flex flex-col space-y-2 pt-4">
