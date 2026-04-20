@@ -1,7 +1,7 @@
 {
-  "name": "vite-react-typescript-starter",
+  "name": "one-point-motors",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -35,6 +35,6 @@
     "vite": "^5.4.2"
   },
   "engines": {
-    "node": ">=18"
+    "node": "20.x"
   }
 }

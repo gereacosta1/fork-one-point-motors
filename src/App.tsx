@@ -7,8 +7,6 @@ import Contact from './components/Contact';
 import Footer from './components/Footer';
 import MotorcycleModal from './components/MotorcycleModal';
 import { I18nProvider } from './i18n/I18nProvider';
-
-// 🛒 carrito
 import { CartProvider, useCart } from './context/CartContext';
 import CartDrawer from './components/CartDrawer';
 import { ShoppingCart } from 'lucide-react';
@@ -30,20 +28,20 @@ export interface Motorcycle {
   gallery?: string[];
 }
 
-// Botón flotante para abrir el carrito (usa open() y cuenta total de qty)
 function CartFab() {
   const { open, items } = useCart();
-  const count = items.reduce((sum, it) => sum + it.qty, 0);
+  const count = items.reduce((sum, item) => sum + item.qty, 0);
 
   if (count <= 0) return null;
 
   return (
     <button
+      type="button"
       onClick={open}
-      className="fixed right-4 bottom-4 z-[9999] bg-brand-600 text-white rounded-full shadow-2xl px-5 py-3 flex items-center gap-2 hover:bg-brand-700"
+      className="fixed right-4 bottom-4 z-[9999] flex items-center gap-2 rounded-full bg-brand-600 px-5 py-3 text-white shadow-2xl transition hover:bg-brand-700"
       aria-label="Abrir carrito"
     >
-      <ShoppingCart className="w-5 h-5" />
+      <ShoppingCart className="h-5 w-5" />
       <span className="font-black">{count}</span>
     </button>
   );
@@ -55,20 +53,23 @@ function AppInner() {
 
   const scrollToSection = (sectionId: string) => {
     setActiveSection(sectionId);
+
     const element = document.getElementById(sectionId);
-    if (element) element.scrollIntoView({ behavior: 'smooth' });
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
   };
 
-  const handlePhoneCall = () => window.open('tel:+1 (786) 253-0995', '_self');
+  const handlePhoneCall = () => {
+    window.open('tel:+17862530995', '_self');
+  };
 
   const handleWhatsApp = () => {
-    const message = encodeURIComponent('¡Hola! Me interesa información sobre sus motocicletas. ¿Podrían ayudarme?');
-    const whatsappUrl = `https://wa.me/+17862530995?text=${message}`;
+    const message = encodeURIComponent(
+      '¡Hola! Me interesa información sobre sus motocicletas. ¿Podrían ayudarme?'
+    );
+    const whatsappUrl = `https://wa.me/17862530995?text=${message}`;
     window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
-  };
-
-  const handleEmail = () => {
-    window.open('mailto:onewaymotors2@gmail.com.mx?subject=Consulta sobre motocicletas', '_self');
   };
 
   return (
@@ -78,7 +79,10 @@ function AppInner() {
 
       <Catalog onViewDetails={setSelectedMotorcycle} />
       <About />
-      <Contact onPhoneCall={handlePhoneCall} onWhatsApp={handleWhatsApp} onEmail={handleEmail} />
+      <Contact
+        onPhoneCall={handlePhoneCall}
+        onWhatsApp={handleWhatsApp}
+      />
       <Footer />
 
       {selectedMotorcycle && (
@@ -90,7 +94,6 @@ function AppInner() {
         />
       )}
 
-      {/* Botón flotante + Drawer del carrito */}
       <CartFab />
       <CartDrawer />
     </div>

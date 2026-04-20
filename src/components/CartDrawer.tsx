@@ -50,25 +50,34 @@ const CartDrawer: React.FC = () => {
       className={`fixed inset-0 z-[10000] ${isOpen ? "pointer-events-auto" : "pointer-events-none"}`}
       aria-hidden={!isOpen}
     >
+      {/* Overlay */}
       <div
         className={`absolute inset-0 bg-black/50 transition-opacity ${isOpen ? "opacity-100" : "opacity-0"}`}
         onClick={close}
       />
 
+      {/* Drawer */}
       <aside
         className={`absolute right-0 top-0 h-full w-full max-w-md bg-black text-white border-l border-white/10 shadow-2xl transform transition-transform
         ${isOpen ? "translate-x-0" : "translate-x-full"}`}
         role="dialog"
         aria-label={t("cart.title")}
       >
+        {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-white/10">
           <h3 className="text-xl font-black">{t("cart.title")}</h3>
-          <button onClick={close} className="p-2 rounded hover:bg-white/10" aria-label={t("modal.close")}>
+          <button
+            onClick={close}
+            className="p-2 rounded hover:bg-white/10"
+            aria-label={t("modal.close")}
+          >
             <X className="w-5 h-5" />
           </button>
         </div>
 
+        {/* Content */}
         <div className="p-4 space-y-4 overflow-y-auto" style={{ maxHeight: "calc(100vh - 220px)" }}>
+          {/* Quick Add */}
           <div className="border border-white/10 rounded-xl p-3">
             <div className="flex items-center justify-between mb-2">
               <p className="font-black text-sm">Quick Add</p>
@@ -88,13 +97,13 @@ const CartDrawer: React.FC = () => {
                     alt={q.name}
                     className="w-12 h-12 rounded object-cover bg-white/5"
                     onError={(e) => {
-                      const timg = e.currentTarget as HTMLImageElement;
-                      if (!timg.src.endsWith("/fallback.png")) timg.src = "/fallback.png";
+                      const img = e.currentTarget;
+                      if (!img.src.includes("fallback")) img.src = "/IMG/fallback.png";
                     }}
                   />
                   <div className="text-left min-w-0">
                     <p className="text-xs font-bold truncate">{q.name}</p>
-                    <p className="text-xs text-white/70">{fmtMoney(Number(q.price))}</p>
+                    <p className="text-xs text-white/70">{fmtMoney(q.price)}</p>
                     <p className="text-[11px] text-white/50">Add to cart</p>
                   </div>
                 </button>
@@ -102,30 +111,32 @@ const CartDrawer: React.FC = () => {
             </div>
           </div>
 
+          {/* Items */}
           {items.length === 0 ? (
             <p className="text-white/70">{t("cart.empty")}</p>
           ) : (
             items.map((it) => (
               <div key={it.id} className="flex gap-3 border border-white/10 rounded-lg p-3">
                 <img
-                  src={it.image || "/fallback.png"}
+                  src={it.image || "/IMG/fallback.png"}
                   alt={it.name}
                   className="w-20 h-20 object-cover rounded"
                   onError={(e) => {
-                    const timg = e.currentTarget as HTMLImageElement;
-                    if (!timg.src.endsWith("/fallback.png")) timg.src = "/fallback.png";
+                    const img = e.currentTarget;
+                    if (!img.src.includes("fallback")) img.src = "/IMG/fallback.png";
                   }}
                 />
+
                 <div className="flex-1 min-w-0">
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
                       <p className="font-bold truncate">{it.name}</p>
-                      <p className="text-sm text-white/70">{fmtMoney(Number(it.price))}</p>
+                      <p className="text-sm text-white/70">{fmtMoney(it.price)}</p>
                     </div>
+
                     <button
                       onClick={() => removeItem(it.id)}
                       className="p-2 rounded hover:bg-white/10"
-                      title={t("cart.remove")}
                       aria-label={t("cart.remove")}
                     >
                       <Trash2 className="w-4 h-4" />
@@ -136,8 +147,6 @@ const CartDrawer: React.FC = () => {
                     <button
                       onClick={() => handleDec(it.id, it.qty)}
                       className="p-2 rounded bg-white/10 hover:bg-white/20"
-                      aria-label={t("cart.minus")}
-                      title={t("cart.minus")}
                     >
                       <Minus className="w-4 h-4" />
                     </button>
@@ -147,13 +156,13 @@ const CartDrawer: React.FC = () => {
                     <button
                       onClick={() => handleInc(it.id, it.qty)}
                       className="p-2 rounded bg-white/10 hover:bg-white/20"
-                      aria-label={t("cart.plus")}
-                      title={t("cart.plus")}
                     >
                       <Plus className="w-4 h-4" />
                     </button>
 
-                    <span className="ml-auto font-bold">{fmtMoney(Number(it.price) * Number(it.qty))}</span>
+                    <span className="ml-auto font-bold">
+                      {fmtMoney(it.price * it.qty)}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -161,10 +170,11 @@ const CartDrawer: React.FC = () => {
           )}
         </div>
 
+        {/* Footer */}
         <div className="p-4 border-t border-white/10 space-y-3">
           <div className="flex items-center justify-between">
             <span className="text-white/80">{t("cart.total")}</span>
-            <span className="text-xl font-black">{fmtMoney(Number(totalUSD) || 0)}</span>
+            <span className="text-xl font-black">{fmtMoney(totalUSD)}</span>
           </div>
 
           <div className="flex gap-2">

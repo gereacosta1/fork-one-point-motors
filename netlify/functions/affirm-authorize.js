@@ -1,10 +1,9 @@
 // netlify/functions/affirm-authorize.js
+
 const BASE = process.env.AFFIRM_API_BASE || "https://api.affirm.com";
 const TXN = "/api/v1/transactions";
 
-// Si tu merchant es "global integration" (fuera de USA), Affirm pide country-code en headers.
-// Para USA lo podés dejar vacío.
-const COUNTRY_CODE = process.env.AFFIRM_COUNTRY_CODE || ""; // ejemplo: "USA", "CAN"
+const COUNTRY_CODE = process.env.AFFIRM_COUNTRY_CODE || "";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -12,9 +11,9 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "Content-Type, Authorization",
 };
 
-const safe = (o) => {
+const safe = (obj) => {
   try {
-    return JSON.stringify(o, null, 2).slice(0, 8000);
+    return JSON.stringify(obj, null, 2).slice(0, 8000);
   } catch {
     return "[unserializable]";
   }
@@ -27,28 +26,34 @@ const doFetch = async (...args) => {
 };
 
 function getAuthHeader() {
-  const PUB = process.env.AFFIRM_PUBLIC_KEY;
-  const PRIV = process.env.AFFIRM_PRIVATE_KEY;
-  if (!PUB || !PRIV) return null;
-  return "Basic " + Buffer.from(`${PUB}:${PRIV}`).toString("base64");
+  const pub = process.env.AFFIRM_PUBLIC_KEY;
+  const priv = process.env.AFFIRM_PRIVATE_KEY;
+
+  if (!pub || !priv) return null;
+
+  return "Basic " + Buffer.from(`${pub}:${priv}`).toString("base64");
 }
 
-function buildAffirmHeaders(extra = {}) {
-  const AUTH = getAuthHeader();
-  if (!AUTH) return null;
+function buildHeaders(extra = {}) {
+  const auth = getAuthHeader();
+  if (!auth) return null;
 
-  const h = {
+  const headers = {
     Accept: "application/json",
-    Authorization: AUTH,
+    Authorization: auth,
     ...extra,
   };
 
-  if (COUNTRY_CODE) h["country-code"] = COUNTRY_CODE;
-  return h;
+  if (COUNTRY_CODE) {
+    headers["country-code"] = COUNTRY_CODE;
+  }
+
+  return headers;
 }
 
 async function readJson(res) {
   const text = await res.text();
+
   try {
     return text ? JSON.parse(text) : null;
   } catch {
@@ -58,18 +63,31 @@ async function readJson(res) {
 
 export async function handler(event) {
   if (event.httpMethod === "OPTIONS") {
-    return { statusCode: 200, headers: corsHeaders, body: "OK" };
+    return { statusCode: 200, headers: corsHeaders, body: "" };
   }
 
   if (event.httpMethod !== "POST") {
-    return { statusCode: 405, headers: corsHeaders, body: "Method Not Allowed" };
+    return {
+      statusCode: 405,
+      headers: corsHeaders,
+      body: "Method Not Allowed",
+    };
   }
 
   try {
-    const body = JSON.parse(event.body || "{}");
+    let body = {};
+    try {
+      body = JSON.parse(event.body || "{}");
+    } catch {
+      return {
+        statusCode: 400,
+        headers: corsHeaders,
+        body: JSON.stringify({ ok: false, error: "invalid_json_body" }),
+      };
+    }
 
-    // -------- DIAG (para chequear env y endpoints) --------
-    if (body && body.diag === true) {
+    // ===== DIAG =====
+    if (body.diag === true) {
       return {
         statusCode: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -77,72 +95,73 @@ export async function handler(event) {
           ok: true,
           diag: {
             base: BASE,
-            txn: `${BASE}${TXN}`,
+            endpoint: `${BASE}${TXN}`,
             hasPublicKey: Boolean(process.env.AFFIRM_PUBLIC_KEY),
             hasPrivateKey: Boolean(process.env.AFFIRM_PRIVATE_KEY),
             countryCode: COUNTRY_CODE || null,
             nodeVersion: process.versions?.node || null,
-            hasFetch: typeof fetch !== "undefined",
           },
         }),
       };
     }
 
-    // -------- PING (solo verifica auth con una llamada liviana) --------
-    if (body && body.ping === true) {
-      const headers = buildAffirmHeaders();
+    // ===== PING =====
+    if (body.ping === true) {
+      const headers = buildHeaders();
       if (!headers) {
         return {
           statusCode: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-          body: JSON.stringify({ ok: false, error: "Missing AFFIRM_PUBLIC_KEY or AFFIRM_PRIVATE_KEY" }),
+          headers: corsHeaders,
+          body: JSON.stringify({ ok: false, error: "missing_keys" }),
         };
       }
 
       const url = `${BASE}${TXN}?limit=1&transaction_type=charge`;
 
-      const r = await doFetch(url, { method: "GET", headers });
-      const data = await readJson(r);
+      const res = await doFetch(url, { method: "GET", headers });
+      const data = await readJson(res);
 
-      console.log("[affirm][ping]", { status: r.status, resp: safe(data) });
+      console.log("[affirm][ping]", res.status, safe(data));
 
       return {
-        statusCode: r.ok ? 200 : r.status,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-        body: JSON.stringify({ ok: r.ok, status: r.status, data }),
+        statusCode: res.ok ? 200 : res.status,
+        headers: corsHeaders,
+        body: JSON.stringify({ ok: res.ok, status: res.status, data }),
       };
     }
 
-    // -------- MAIN FLOW: AUTHORIZE + (optional) CAPTURE --------
+    // ===== MAIN FLOW =====
     const {
-      checkout_token, // esto que te llega de Affirm
+      checkout_token,
       order_id,
       amount_cents,
       capture = true,
       shipping_carrier,
       shipping_confirmation,
-    } = body || {};
+    } = body;
 
     if (!checkout_token || !order_id) {
       return {
         statusCode: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-        body: JSON.stringify({ ok: false, error: "Missing checkout_token or order_id" }),
+        headers: corsHeaders,
+        body: JSON.stringify({
+          ok: false,
+          error: "missing_checkout_token_or_order_id",
+        }),
       };
     }
 
-    const headers = buildAffirmHeaders({ "Content-Type": "application/json" });
+    const headers = buildHeaders({ "Content-Type": "application/json" });
     if (!headers) {
       return {
         statusCode: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-        body: JSON.stringify({ ok: false, error: "Missing AFFIRM_PUBLIC_KEY or AFFIRM_PRIVATE_KEY" }),
+        headers: corsHeaders,
+        body: JSON.stringify({ ok: false, error: "missing_keys" }),
       };
     }
 
-    // 1) AUTHORIZE
-    // IMPORTANT: Según docs, el checkout_token se manda como transaction_id. :contentReference[oaicite:2]{index=2}
-    const authorizePayload = {
+    // ===== AUTHORIZE =====
+    const authPayload = {
       transaction_id: String(checkout_token),
       order_id: String(order_id),
     };
@@ -150,87 +169,100 @@ export async function handler(event) {
     const authRes = await doFetch(`${BASE}${TXN}`, {
       method: "POST",
       headers,
-      body: JSON.stringify(authorizePayload),
+      body: JSON.stringify(authPayload),
     });
 
     const authJson = await readJson(authRes);
-    console.log("[affirm][authorize]", { status: authRes.status, order_id, payload: authorizePayload, resp: safe(authJson) });
+
+    console.log("[affirm][authorize]", {
+      status: authRes.status,
+      order_id,
+      resp: safe(authJson),
+    });
 
     if (!authRes.ok) {
       return {
         statusCode: authRes.status,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-        body: JSON.stringify({ ok: false, step: "authorize", error: authJson }),
+        headers: corsHeaders,
+        body: JSON.stringify({
+          ok: false,
+          step: "authorize",
+          error: authJson,
+        }),
       };
     }
 
     const transactionId = authJson?.id;
+
     if (!transactionId) {
       return {
         statusCode: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: corsHeaders,
         body: JSON.stringify({
           ok: false,
-          step: "authorize",
-          error: "Authorize succeeded but missing transaction id in response",
+          error: "missing_transaction_id",
           raw: authJson,
         }),
       };
     }
 
-    // 2) CAPTURE (opcional)
+    // ===== CAPTURE =====
     let captureJson = null;
 
     if (capture) {
       const amt = Number(amount_cents);
-      const okAmt = Number.isFinite(amt) && amt > 0 && Number.isInteger(amt);
 
-      if (!okAmt) {
+      if (!Number.isFinite(amt) || amt <= 0 || !Number.isInteger(amt)) {
         return {
           statusCode: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          headers: corsHeaders,
           body: JSON.stringify({
             ok: false,
-            step: "validate",
-            error: "amount_cents required (positive integer) when capture=true",
-            got: amount_cents,
+            step: "validation",
+            error: "invalid_amount_cents",
           }),
         };
       }
 
-      const capRes = await doFetch(`${BASE}${TXN}/${encodeURIComponent(transactionId)}/capture`, {
-        method: "POST",
-        headers,
-        body: JSON.stringify({
-          order_id: String(order_id),
-          amount: amt,
-          shipping_carrier,
-          shipping_confirmation,
-        }),
-      });
+      const capRes = await doFetch(
+        `${BASE}${TXN}/${encodeURIComponent(transactionId)}/capture`,
+        {
+          method: "POST",
+          headers,
+          body: JSON.stringify({
+            order_id: String(order_id),
+            amount: amt,
+            shipping_carrier,
+            shipping_confirmation,
+          }),
+        }
+      );
 
       captureJson = await readJson(capRes);
 
       console.log("[affirm][capture]", {
         status: capRes.status,
-        order_id,
-        amount_cents: amt,
-        transactionId,
+        amount: amt,
         resp: safe(captureJson),
       });
 
       if (!capRes.ok) {
         return {
           statusCode: capRes.status,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-          body: JSON.stringify({ ok: false, step: "capture", transaction_id: transactionId, error: captureJson }),
+          headers: corsHeaders,
+          body: JSON.stringify({
+            ok: false,
+            step: "capture",
+            transaction_id: transactionId,
+            error: captureJson,
+          }),
         };
       }
     }
 
     return {
       statusCode: 200,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: corsHeaders,
       body: JSON.stringify({
         ok: true,
         transaction_id: transactionId,
@@ -239,12 +271,16 @@ export async function handler(event) {
         capture: captureJson,
       }),
     };
-  } catch (e) {
-    console.error("[affirm-authorize] error", e?.name, e?.message);
+  } catch (err) {
+    console.error("[affirm-authorize] fatal", err);
+
     return {
       statusCode: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-      body: JSON.stringify({ ok: false, error: "server_error", name: e?.name || null, message: e?.message || null }),
+      headers: corsHeaders,
+      body: JSON.stringify({
+        ok: false,
+        error: err?.message || "server_error",
+      }),
     };
   }
 }

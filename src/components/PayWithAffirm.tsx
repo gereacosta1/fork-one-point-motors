@@ -20,7 +20,6 @@ const toAbsUrl = (u?: string) => {
 
 const FALLBACK_NAME = { first: "Online", last: "Customer" };
 
-// ✅ Nueva dirección
 const FALLBACK_ADDR = {
   line1: "821 NE 79th St",
   city: "Miami",
@@ -34,10 +33,10 @@ export default function PayWithAffirm() {
   const [opening, setOpening] = useState(false);
 
   const normalizeItems = () => {
-    return (items as any[])
-      .map((it: any, i: number) => {
+    return items
+      .map((it, i) => {
         const qty = Math.max(1, Math.trunc(Number(it.qty || 1)));
-        const unit_price = toCents(Number(it.price || 0));
+        const unit_price = toCents(it.price);
 
         const item: any = {
           display_name: String(it.name || `Item ${i + 1}`).slice(0, 120),
@@ -54,41 +53,53 @@ export default function PayWithAffirm() {
 
         return item;
       })
-      .filter((it: any) => it.display_name && it.unit_price > 0 && it.qty > 0);
+      .filter((it) => it.display_name && it.unit_price > 0 && it.qty > 0);
   };
 
   async function openAffirm() {
     if (!items.length || !totalUSD || totalUSD <= 0) return;
 
     setOpening(true);
+
     try {
       const PUBLIC_KEY = import.meta.env.VITE_AFFIRM_PUBLIC_KEY || "";
+
       if (!PUBLIC_KEY) {
-        console.error("[Affirm] Falta VITE_AFFIRM_PUBLIC_KEY");
-        setOpening(false);
+        console.error("[Affirm] Missing VITE_AFFIRM_PUBLIC_KEY");
+        alert("Payment not available right now.");
         return;
       }
 
       await loadAffirm(PUBLIC_KEY);
 
       const affirm = (window as any).affirm;
-      if (!affirm?.checkout) {
-        console.error("[Affirm] SDK no disponible");
-        setOpening(false);
+
+      if (!affirm || typeof affirm.checkout !== "function") {
+        console.error("[Affirm] SDK not ready");
+        alert("Payment system not ready.");
         return;
       }
 
       const itemsNorm = normalizeItems();
 
-      // Total consistente con items
-      const sumItemsCents = (arr: any[]) =>
-        arr.reduce((acc: number, it: any) => acc + it.unit_price * it.qty, 0);
+      if (!itemsNorm.length) {
+        console.error("[Affirm] No valid items");
+        alert("Invalid cart data.");
+        return;
+      }
 
-      const totalCents = sumItemsCents(itemsNorm);
+      const totalCents = itemsNorm.reduce(
+        (acc, it) => acc + it.unit_price * it.qty,
+        0
+      );
+
+      if (totalCents <= 0) {
+        console.error("[Affirm] Invalid total");
+        alert("Invalid total amount.");
+        return;
+      }
+
       const orderId = "ORDER-" + Date.now();
-
-      const billing = { name: FALLBACK_NAME, address: FALLBACK_ADDR };
-      const shipping = { name: FALLBACK_NAME, address: FALLBACK_ADDR };
 
       const checkout: any = {
         merchant: {
@@ -97,8 +108,8 @@ export default function PayWithAffirm() {
           user_confirmation_url_action: "GET",
           name: "ONE POINT MOTORS",
         },
-        billing,
-        shipping,
+        billing: { name: FALLBACK_NAME, address: FALLBACK_ADDR },
+        shipping: { name: FALLBACK_NAME, address: FALLBACK_ADDR },
         items: itemsNorm,
         currency: "USD",
         shipping_amount: 0,
@@ -107,75 +118,68 @@ export default function PayWithAffirm() {
         order_id: orderId,
       };
 
-      console.group("[Affirm][Checkout Debug]");
-      console.log("sumItemsCents:", totalCents);
-      console.table(
-        itemsNorm.map((it: any) => ({
-          name: it.display_name,
-          sku: it.sku,
-          unit_price: it.unit_price,
-          qty: it.qty,
-          item_url: it.item_url,
-          item_image_url: it.item_image_url || "(none)",
-        }))
-      );
-      console.log("billing:", billing);
-      console.log("shipping:", shipping);
+      // Debug útil (no molesta en prod)
+      console.group("[Affirm]");
+      console.log("Total cents:", totalCents);
+      console.log("Items:", itemsNorm);
       console.groupEnd();
 
-      // ✅ Guardar keys alineadas con public/affirm/confirm.html
       try {
         sessionStorage.setItem("affirm_order_id", orderId);
         sessionStorage.setItem("affirm_order_amount_cents", String(totalCents));
-        sessionStorage.setItem("affirm_amount_cents", String(totalCents)); // compatibilidad (opcional)
-        sessionStorage.removeItem("affirm_captured_order_id"); // por si quedó de un intento anterior
+        sessionStorage.setItem("affirm_amount_cents", String(totalCents));
+        sessionStorage.removeItem("affirm_captured_order_id");
       } catch {}
 
       affirm.checkout(checkout);
+
       affirm.checkout.open({
-        // ✅ NO capturar aquí. Dejamos que capture confirm.html (un solo lugar).
         onSuccess: (res: { checkout_token: string }) => {
           try {
             sessionStorage.setItem("affirm_checkout_token", res.checkout_token);
-            // Redirigimos explícitamente con token para robustez
-            window.location.href = `/affirm/confirm.html?checkout_token=${encodeURIComponent(
-              res.checkout_token
-            )}`;
+
+            window.location.href =
+              `/affirm/confirm.html?checkout_token=` +
+              encodeURIComponent(res.checkout_token);
           } catch (e) {
-            console.warn("[Affirm] No se pudo guardar token/redirigir:", e);
+            console.warn("[Affirm] redirect error:", e);
           } finally {
             setOpening(false);
           }
         },
+
         onFail: (err: any) => {
-          console.warn("[Affirm] onFail:", err);
-          setOpening(false);
+          console.warn("[Affirm] failed:", err);
           alert("Financing not completed.");
+          setOpening(false);
         },
+
         onValidationError: (err: any) => {
-          console.warn("[Affirm] onValidationError:", err);
+          console.warn("[Affirm] validation error:", err);
+          alert("Invalid payment data.");
           setOpening(false);
-          alert("Invalid data/amount for Affirm.");
         },
+
         onClose: () => {
+          console.log("[Affirm] closed");
           setOpening(false);
-          console.log("[Affirm] closed by user");
         },
       });
-    } catch (e) {
-      console.error("Error opening Affirm", e);
+    } catch (err) {
+      console.error("[Affirm] Fatal error:", err);
+      alert("Something went wrong with payment.");
       setOpening(false);
     }
   }
 
   return (
     <button
-      onClick={openAffirm}
-      disabled={opening || !items.length || !totalUSD || totalUSD <= 0}
-      className="w-full bg-white text-black px-4 py-3 rounded-lg font-bold disabled:opacity-50 hover:bg-white/90"
       type="button"
+      onClick={openAffirm}
+      disabled={opening || !items.length || totalUSD <= 0}
+      className="w-full bg-white text-black px-4 py-3 rounded-lg font-bold disabled:opacity-50 hover:bg-white/90"
     >
-      {opening ? "Opening…" : "Pay with Affirm"}
+      {opening ? "Opening..." : "Pay with Affirm"}
     </button>
   );
 }

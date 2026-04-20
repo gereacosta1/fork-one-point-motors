@@ -9,42 +9,44 @@ const PayWithCard: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
 
   const handleClick = async () => {
-  setError(null);
+    setError(null);
 
-  if (!items.length) {
-    setError("Your cart is empty.");
-    return;
-  }
+    if (!items.length) {
+      setError("Your cart is empty.");
+      return;
+    }
 
-  setLoading(true);
-  try {
-    await startCardCheckout(items); // Stripe hace redirect si OK
-  } catch (e: any) {
-    console.error(e);
-    setError(e?.message || "An error occurred while starting the payment.");
-  } finally {
-    setLoading(false);
-  }
-};
+    setLoading(true);
+
+    try {
+      await startCardCheckout(items);
+    } catch (err: unknown) {
+      console.error("[Card Checkout]", err);
+
+      const message =
+        err instanceof Error
+          ? err.message
+          : "An error occurred while starting the payment.";
+
+      setError(message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="space-y-2">
       <button
         type="button"
         onClick={handleClick}
-        disabled={loading || !items.length}
-        className="w-full rounded-md bg-slate-900 px-4 py-3 text-sm font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+        disabled={loading || items.length === 0}
+        className="w-full rounded-md bg-slate-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
       >
-        {loading
-          ? "Redirecting to card payment…"
-          : "Pay by card (credit/debit)"}
+        {loading ? "Redirecting to card payment..." : "Pay by card (credit/debit)"}
       </button>
 
       <p className="text-xs text-slate-500">
-        Total:{" "}
-        <span className="font-semibold">
-          ${(Number(totalUSD) || 0).toFixed(2)} USD
-        </span>
+        Total: <span className="font-semibold">${totalUSD.toFixed(2)} USD</span>
       </p>
 
       {error && <p className="text-xs text-red-500">{error}</p>}
