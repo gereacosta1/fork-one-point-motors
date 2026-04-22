@@ -1,74 +1,61 @@
-import React from 'react';
-import { ArrowRight, Star, Shield, Wrench } from 'lucide-react';
-import { useI18n } from '../i18n/I18nProvider';
+import React from "react";
+import { ArrowRight } from "lucide-react";
 
 interface HeroProps {
   onNavigate: (section: string) => void;
 }
 
 const Hero: React.FC<HeroProps> = ({ onNavigate }) => {
-  const { t } = useI18n();
-
   return (
-    <section id="inicio" className="relative min-h-screen flex items-center justify-center overflow-hidden">
-      {/* Background Image */}
-      <div className="absolute inset-0 z-0">
-        <div className="absolute inset-0 bg-gradient-to-r from-black/90 to-black/60 z-10"></div>
-        <img
-          src="https://images.pexels.com/photos/2116475/pexels-photo-2116475.jpeg?auto=compress&cs=tinysrgb&w=1920&h=1080"
-          alt="Electric Vehicles"
-          className="w-full h-full object-cover"
-        />
-      </div>
+    <section
+      id="inicio"
+      className="min-h-screen flex items-center pt-32 pb-20 px-6"
+    >
+      <div className="container mx-auto grid lg:grid-cols-2 gap-16 items-center">
 
-      {/* Content */}
-      <div className="relative z-20 container mx-auto px-4 text-center">
-        <div className="max-w-4xl mx-auto">
-          <h1 className="text-5xl md:text-7xl lg:text-8xl font-black text-white mb-8 tracking-tight">
-            {t('hero.title.pre')}{' '}
-            <span className="text-brand">{t('hero.title.highlight')}</span>
-            <br />
-            {t('hero.title.post')}
-          </h1>
-
-          <p className="text-2xl md:text-3xl lg:text-4xl text-white mb-12 max-w-3xl mx-auto font-bold">
-            {t('hero.subtitle')}
+        {/* LEFT */}
+        <div>
+          <p className="text-sm text-white/50 mb-4">
+            Electric Mobility • Miami
           </p>
 
-          {/* CTA Buttons */}
-          <div className="flex flex-col sm:flex-row gap-6 justify-center mb-16">
+          <h1 className="text-5xl md:text-7xl font-black leading-[1.05] mb-6">
+            Electric <br />
+            Performance <br />
+            <span className="text-brand">Redefined</span>
+          </h1>
+
+          <p className="text-white/60 text-lg max-w-lg mb-10">
+            Discover premium electric bikes, scooters and urban vehicles.
+            Built for performance, designed for the future.
+          </p>
+
+          <div className="flex gap-4">
             <button
-              onClick={() => onNavigate('catalogo')}
-              className="bg-brand backdrop-blur-md border border-brand/50 text-white px-12 py-4 rounded-lg text-xl font-black hover:bg-brand-hover transition-all duration-300 flex items-center justify-center space-x-3 group transform hover:scale-105 shadow-2xl"
+              onClick={() => onNavigate("catalogo")}
+              className="bg-white text-black px-8 py-4 font-bold flex items-center gap-2"
             >
-              <span>{t('hero.cta.explore')}</span>
-              <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+              View Catalog
+              <ArrowRight size={18} />
             </button>
 
             <button
-              onClick={() => onNavigate('contacto')}
-              className="border-2 border-brand/80 bg-black/30 backdrop-blur-md text-brand px-12 py-4 rounded-lg text-xl font-black hover:bg-brand-hover hover:text-white transition-all duration-300 transform hover:scale-105 shadow-2xl"
+              onClick={() => onNavigate("contacto")}
+              className="border border-white/30 px-8 py-4 font-semibold text-white/80 hover:text-white"
             >
-              {t('hero.cta.finance')}
+              Financing
             </button>
-          </div>
-
-          {/* Features */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl mx-auto">
-            <div className="flex items-center justify-center space-x-3 text-white">
-              <Star className="w-8 h-8 text-brand" />
-              <span className="text-xl md:text-2xl font-bold">{t('hero.feature.quality')}</span>
-            </div>
-            <div className="flex items-center justify-center space-x-3 text-white">
-              <Shield className="w-8 h-8 text-brand" />
-              <span className="text-xl md:text-2xl font-bold">{t('hero.feature.warranty')}</span>
-            </div>
-            <div className="flex items-center justify-center space-x-3 text-white">
-              <Wrench className="w-8 h-8 text-brand" />
-              <span className="text-xl md:text-2xl font-bold">{t('hero.feature.service')}</span>
-            </div>
           </div>
         </div>
+
+        {/* RIGHT IMAGE */}
+        <div className="relative">
+          <img
+            src="/IMG/electricBike2.jpeg"
+            className="w-full object-contain"
+          />
+        </div>
+
       </div>
     </section>
   );

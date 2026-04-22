@@ -1,10 +1,8 @@
-// src/components/Catalog.tsx
 import React, { useMemo, useState } from 'react';
-import { Heart, Eye, Fuel, Gauge, Calendar } from 'lucide-react';
+import { Heart, Eye, Fuel, Gauge, Calendar, ArrowUpRight } from 'lucide-react';
 import { Motorcycle } from '../App';
 import AffirmButton from './AffirmButton';
-import UnderlineGrow from "./UnderlineGrow";
-
+import UnderlineGrow from './UnderlineGrow';
 import { useCart } from '../context/CartContext';
 import { useI18n } from '../i18n/I18nProvider';
 
@@ -12,14 +10,20 @@ interface CatalogProps {
   onViewDetails: (motorcycle: Motorcycle) => void;
 }
 
-/** Toast simple para reemplazar alert() de "Ver más motos" */
 function SimpleToast({
-  show, text, onClose,
-}: { show: boolean; text: string; onClose: () => void }) {
+  show,
+  text,
+  onClose,
+}: {
+  show: boolean;
+  text: string;
+  onClose: () => void;
+}) {
   if (!show) return null;
+
   return (
     <div
-      className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-black/90 text-white border border-white/20 px-4 py-3 rounded-xl shadow-2xl z-[9999] text-sm font-semibold"
+      className="fixed bottom-6 left-1/2 z-[9999] -translate-x-1/2 rounded-2xl border border-white/10 bg-[#101113]/95 px-5 py-3 text-sm font-semibold text-white shadow-2xl backdrop-blur-xl"
       onClick={onClose}
       role="status"
     >
@@ -28,31 +32,29 @@ function SimpleToast({
   );
 }
 
-// --- Botón reutilizable con estilos coherentes ---
 type BtnProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
-  variant?: "primary" | "secondary" | "ghost";
+  variant?: 'primary' | 'secondary' | 'ghost';
   compact?: boolean;
 };
 
 const Btn: React.FC<BtnProps> = ({
-  variant = "primary",
+  variant = 'primary',
   compact = true,
-  className = "",
+  className = '',
   children,
   ...props
 }) => {
   const base =
-    "w-full inline-flex items-center justify-center gap-2 rounded-xl font-extrabold " +
-    "transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-500 " +
-    "disabled:opacity-60 disabled:cursor-not-allowed";
-  const size = compact ? "px-3 py-2 text-sm" : "px-5 py-3 text-lg";
+    'w-full inline-flex items-center justify-center gap-2 rounded-2xl font-extrabold transition-all duration-200 focus:outline-none disabled:opacity-60 disabled:cursor-not-allowed';
+  const size = compact ? 'px-4 py-3 text-sm' : 'px-6 py-4 text-lg';
+
   const variants = {
     primary:
-      "bg-brand-600 text-white hover:bg-brand-700 shadow-lg hover:shadow-brand-500/30 active:scale-[.99]",
+      'bg-white text-black hover:bg-brand hover:text-black shadow-lg active:scale-[.99]',
     secondary:
-      "bg-black text-white border border-white/15 hover:bg-black/90 shadow-lg active:scale-[.99]",
+      'bg-white/[0.04] text-white border border-white/12 hover:bg-white/[0.08] active:scale-[.99]',
     ghost:
-      "bg-transparent text-white/90 border border-white/20 hover:text-white hover:border-white/40",
+      'bg-transparent text-white/80 border border-white/10 hover:text-white hover:border-white/25',
   } as const;
 
   return (
@@ -62,21 +64,19 @@ const Btn: React.FC<BtnProps> = ({
   );
 };
 
-/** 🔁 Mapeo: texto ES del array -> clave i18n */
 const FEATURE_KEY_BY_ES: Record<string, string> = {
-  "Motor eléctrico": "feature.motor",
-  "Ligero y ágil": "feature.lightAgile",
-  "Batería de alta capacidad": "feature.batteryHigh",
-  "Motor eléctrico de alta potencia": "feature.motorHighPower",
-  "Pantalla táctil": "feature.touchscreen",
-  "Conectividad Bluetooth": "feature.bluetooth",
-  "Sistema de navegación GPS": "feature.gps",
-  "High-capacity battery": "feature.batteryHigh",
-  "Light & agile": "feature.lightAgile",
-  "Electric motor": "feature.motor",
+  'Motor eléctrico': 'feature.motor',
+  'Ligero y ágil': 'feature.lightAgile',
+  'Batería de alta capacidad': 'feature.batteryHigh',
+  'Motor eléctrico de alta potencia': 'feature.motorHighPower',
+  'Pantalla táctil': 'feature.touchscreen',
+  'Conectividad Bluetooth': 'feature.bluetooth',
+  'Sistema de navegación GPS': 'feature.gps',
+  'High-capacity battery': 'feature.batteryHigh',
+  'Light & agile': 'feature.lightAgile',
+  'Electric motor': 'feature.motor',
 };
 
-/** ✅ Traducción robusta de features */
 const translateFeature = (
   t: (k: string) => string,
   productId: number,
@@ -110,243 +110,229 @@ const Catalog: React.FC<CatalogProps> = ({ onViewDetails }) => {
 
   const { addItem, open } = useCart();
 
-  // 🔄 Catálogo (incluye items "Invoice" para cobros puntuales)
   const motorcycles: Motorcycle[] = [
-    // --- Invoice items (SIN la palabra "Deposit" en ningún lado)
     {
       id: 9001,
-      name: "E-Bike Fat Tire (Black) — Invoice",
-      brand: "One Point",
-      model: "Invoice",
+      name: 'E-Bike Fat Tire (Black) — Invoice',
+      brand: 'One Point',
+      model: 'Invoice',
       year: 2025,
       price: 4000,
-      image: "/IMG/onepoint-ebike-black-4000.jpeg",
-      condition: "Nueva",
-      engine: "Electric",
+      image: '/IMG/onepoint-ebike-black-4000.jpeg',
+      condition: 'Nueva',
+      engine: 'Electric',
       featured: true,
-      description: "Invoice payment item. Financing available.",
-      features: ["Electric motor", "High-capacity battery", "Light & agile"],
+      description: 'Invoice payment item. Financing available.',
+      features: ['Electric motor', 'High-capacity battery', 'Light & agile'],
     },
     {
       id: 9002,
-      name: "E-Bike (Red) — Invoice",
-      brand: "One Point",
-      model: "Invoice",
+      name: 'E-Bike (Red) — Invoice',
+      brand: 'One Point',
+      model: 'Invoice',
       year: 2025,
       price: 2800,
-      image: "/IMG/onepoint-ebike-red-2800.jpeg",
-      condition: "Nueva",
-      engine: "Electric",
+      image: '/IMG/onepoint-ebike-red-2800.jpeg',
+      condition: 'Nueva',
+      engine: 'Electric',
       featured: true,
-      description: "Invoice payment item. Financing available.",
-      features: ["Electric motor", "Light & agile", "High-capacity battery"],
+      description: 'Invoice payment item. Financing available.',
+      features: ['Electric motor', 'Light & agile', 'High-capacity battery'],
     },
     {
       id: 9003,
-      name: "Electric Scooter (RGB) — Invoice",
-      brand: "One Point",
-      model: "Invoice",
+      name: 'Electric Scooter (RGB) — Invoice',
+      brand: 'One Point',
+      model: 'Invoice',
       year: 2025,
       price: 500,
-      image: "/IMG/onepoint-scooter-rgb-500.jpeg",
-      condition: "Nueva",
-      engine: "Electric",
+      image: '/IMG/onepoint-scooter-rgb-500.jpeg',
+      condition: 'Nueva',
+      engine: 'Electric',
       featured: true,
-      description: "Invoice payment item. Financing available.",
-      features: ["Electric motor", "Light & agile"],
+      description: 'Invoice payment item. Financing available.',
+      features: ['Electric motor', 'Light & agile'],
     },
-
-    // --- Tus productos normales
     {
       id: 5001,
-      name: "Electric Cargo Tricycle",
-      brand: "MZ",
-      model: "E-Cargo",
+      name: 'Electric Cargo Tricycle',
+      brand: 'MZ',
+      model: 'E-Cargo',
       year: 2025,
       price: 5000,
-      image: "/IMG/triciclo-rojo.jpeg",
-      condition: "Nueva",
-      engine: "Electric",
+      image: '/IMG/triciclo-rojo.jpeg',
+      condition: 'Nueva',
+      engine: 'Electric',
       featured: true,
       description:
-        "Robust electric cargo tricycle ideal for deliveries and utility tasks. Durable chassis, large rear cargo bed, weather canopy and comfortable seating. Financing available.",
-      features: ["Motor eléctrico", "Ligero y ágil", "Batería de alta capacidad"],
-      gallery: ["/IMG/triciclo-rojo.jpeg", "/IMG/triciclo-rojo2.jpeg", "/IMG/triciclo-rojo3.jpeg"]
+        'Robust electric cargo tricycle ideal for deliveries and utility tasks. Durable chassis, large rear cargo bed, weather canopy and comfortable seating. Financing available.',
+      features: ['Motor eléctrico', 'Ligero y ágil', 'Batería de alta capacidad'],
+      gallery: ['/IMG/triciclo-rojo.jpeg', '/IMG/triciclo-rojo2.jpeg', '/IMG/triciclo-rojo3.jpeg'],
     },
     {
       id: 5,
-      name: "Electric Scooter",
-      brand: "Scooter",
-      model: "Electric Scooter",
+      name: 'Electric Scooter',
+      brand: 'Scooter',
+      model: 'Electric Scooter',
       year: 2025,
       price: 1500,
-      image: "/IMG/Scooter-electrico(1).jpeg",
-      condition: "Nueva",
-      engine: "Electric",
+      image: '/IMG/Scooter-electrico(1).jpeg',
+      condition: 'Nueva',
+      engine: 'Electric',
       description:
-        "Italian excellence in an electric scooter. Power, style and exclusivity in one vehicle.",
-      features: ["Motor eléctrico", "Ligero y ágil", "Batería de alta capacidad"]
+        'Italian excellence in an electric scooter. Power, style and exclusivity in one vehicle.',
+      features: ['Motor eléctrico', 'Ligero y ágil', 'Batería de alta capacidad'],
     },
     {
       id: 8,
-      name: "Electric Scooter 2025",
-      brand: "Master Sonic",
-      model: "Electric Scooter",
+      name: 'Electric Scooter 2025',
+      brand: 'Master Sonic',
+      model: 'Electric Scooter',
       year: 2025,
       price: 1750,
-      image: "/IMG/scooter-nuevo.webp",
-      condition: "Nueva",
-      engine: "Electric",
-      description:
-        "Compact, efficient and comfortable for everyday urban mobility.",
-      features: ["Motor eléctrico", "Ligero y ágil", "Batería de alta capacidad"]
+      image: '/IMG/scooter-nuevo.webp',
+      condition: 'Nueva',
+      engine: 'Electric',
+      description: 'Compact, efficient and comfortable for everyday urban mobility.',
+      features: ['Motor eléctrico', 'Ligero y ágil', 'Batería de alta capacidad'],
     },
     {
       id: 11,
-      name: "Electric Bike Pro",
-      brand: "E-Bike",
-      model: "EBike Pro 2025",
+      name: 'Electric Bike Pro',
+      brand: 'E-Bike',
+      model: 'EBike Pro 2025',
       year: 2025,
       price: 1000,
-      image: "/IMG/electricBike2.jpeg",
-      condition: "Nueva",
-      engine: "Electric",
+      image: '/IMG/electricBike2.jpeg',
+      condition: 'Nueva',
+      engine: 'Electric',
       featured: true,
-      description: "High-performance e-bike, ideal for city and long rides.",
-      features: ["Motor eléctrico", "Batería de alta capacidad", "Tablero digital"]
+      description: 'High-performance e-bike, ideal for city and long rides.',
+      features: ['Motor eléctrico', 'Batería de alta capacidad', 'Tablero digital'],
     },
     {
       id: 12,
-      name: "Urban Electric Bike",
-      brand: "E-Bike",
-      model: "Scooter Urban 2025",
+      name: 'Urban Electric Bike',
+      brand: 'E-Bike',
+      model: 'Scooter Urban 2025',
       year: 2025,
       price: 1000,
-      image: "/IMG/electricBike3.jpeg",
-      condition: "Nueva",
-      engine: "Electric",
+      image: '/IMG/electricBike3.jpeg',
+      condition: 'Nueva',
+      engine: 'Electric',
       featured: true,
-      description: "Urban electric bike, comfortable and efficient for daily use.",
-      features: ["Motor eléctrico", "Ligero y ágil", "Batería de alta capacidad"]
+      description: 'Urban electric bike, comfortable and efficient for daily use.',
+      features: ['Motor eléctrico', 'Ligero y ágil', 'Batería de alta capacidad'],
     },
     {
       id: 16,
-      name: "Premium Electric Bicycle",
-      brand: "Universal",
-      model: "Scooter Premium 2025",
+      name: 'Premium Electric Bicycle',
+      brand: 'Universal',
+      model: 'Scooter Premium 2025',
       year: 2025,
       price: 3500,
-      image: "/IMG/bici-electric-negra.jpeg",
-      condition: "Nueva",
-      engine: "Electric",
+      image: '/IMG/bici-electric-negra.jpeg',
+      condition: 'Nueva',
+      engine: 'Electric',
       featured: true,
       description:
-        "Premium electric bicycle, ideal for long trips and comfortable commuting.",
-      features: ["Motor eléctrico", "Batería de alta capacidad", "Diseño ergonómico"]
+        'Premium electric bicycle, ideal for long trips and comfortable commuting.',
+      features: ['Motor eléctrico', 'Batería de alta capacidad', 'Diseño ergonómico'],
     },
     {
       id: 17,
-      name: "Amazta Electric Scooter",
-      brand: "Amazta",
-      model: "Amazta 2025",
+      name: 'Amazta Electric Scooter',
+      brand: 'Amazta',
+      model: 'Amazta 2025',
       year: 2025,
       price: 2500,
-      image: "/IMG/scooter-nuevo2.webp",
-      condition: "Nueva",
-      engine: "Electric",
+      image: '/IMG/scooter-nuevo2.webp',
+      condition: 'Nueva',
+      engine: 'Electric',
       featured: true,
-      description:
-        "Perfect blend of style and technology. Ideal for urban commuting.",
-      features: ["Motor eléctrico", "Diseño moderno", "Batería de larga duración"]
+      description: 'Perfect blend of style and technology. Ideal for urban commuting.',
+      features: ['Motor eléctrico', 'Diseño moderno', 'Batería de larga duración'],
     },
     {
       id: 18,
-      name: "Movelito Electric Scooter",
-      brand: "Movelito",
-      model: "Movelito 2025",
+      name: 'Movelito Electric Scooter',
+      brand: 'Movelito',
+      model: 'Movelito 2025',
       year: 2025,
       price: 1850,
-      image: "/IMG/scooter-nuevo3.webp",
-      condition: "Nueva",
-      engine: "Electric",
+      image: '/IMG/scooter-nuevo3.webp',
+      condition: 'Nueva',
+      engine: 'Electric',
       featured: true,
-      description:
-        "Compact and efficient scooter. Perfect for the city with an attractive design.",
-      features: ["Motor eléctrico", "Ligero y ágil", "Batería de alta capacity"]
+      description: 'Compact and efficient scooter. Perfect for the city with an attractive design.',
+      features: ['Motor eléctrico', 'Ligero y ágil', 'Batería de alta capacity'],
     },
     {
       id: 19,
-      name: "Galaxy Premium Electric Scooter",
-      brand: "Galaxy",
-      model: "Premium 2025",
+      name: 'Galaxy Premium Electric Scooter',
+      brand: 'Galaxy',
+      model: 'Premium 2025',
       year: 2025,
       price: 2000,
-      image: "/IMG/scooter-nuevo4.webp",
-      condition: "Nueva",
-      engine: "Electric",
+      image: '/IMG/scooter-nuevo4.webp',
+      condition: 'Nueva',
+      engine: 'Electric',
       featured: true,
-      description:
-        "Latest innovation in urban mobility with futuristic design and advanced tech.",
+      description: 'Latest innovation in urban mobility with futuristic design and advanced tech.',
       features: [
-        "Motor eléctrico de alta potencia",
-        "Pantalla táctil",
-        "Conectividad Bluetooth",
-        "Sistema de navegación GPS"
-      ]
-    }
+        'Motor eléctrico de alta potencia',
+        'Pantalla táctil',
+        'Conectividad Bluetooth',
+        'Sistema de navegación GPS',
+      ],
+    },
   ];
 
   const onlyElectric = useMemo(
-    () => motorcycles.filter(m => (m.engine && m.engine.toLowerCase() === 'electric')),
+    () => motorcycles.filter((m) => m.engine && m.engine.toLowerCase() === 'electric'),
     [motorcycles]
   );
 
   const filteredMotorcycles = useMemo(() => {
-    return onlyElectric.filter(moto => {
+    return onlyElectric.filter((moto) => {
       if (filter === 'all') return true;
       return moto.condition.toLowerCase() === filter;
     });
   }, [onlyElectric, filter]);
 
   const toggleFavorite = (id: number) => {
-    setFavorites(prev =>
-      prev.includes(id)
-        ? prev.filter(favId => favId !== id)
-        : [...prev, id]
-    );
+    setFavorites((prev) => (prev.includes(id) ? prev.filter((favId) => favId !== id) : [...prev, id]));
   };
 
   return (
-    <section id="catalogo" className="py-16 md:py-20 bg-black">
-      <div className="container mx-auto px-4 pb-20">
-        <div className="text-center mb-10">
-          <h2 className="text-4xl md:text-6xl font-black text-white mb-4">
-            <UnderlineGrow>{t('catalog.title')}</UnderlineGrow>
-          </h2>
-          <p className="text-white/90 text-lg md:text-2xl max-w-3xl mx-auto font-bold">
-            {t('catalog.subtitle')}
-          </p>
-        </div>
+    <section id="catalogo" className="bg-[#0b0b0c] py-24 md:py-32">
+      <div className="container mx-auto px-6">
+        <div className="mb-14 flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
+          <div className="max-w-3xl">
+            <p className="mb-4 text-sm font-semibold uppercase tracking-[0.22em] text-white/45">
+              Electric selection
+            </p>
+            <h2 className="mb-5 text-4xl font-black leading-none text-white md:text-6xl">
+              <UnderlineGrow>{t('catalog.title')}</UnderlineGrow>
+            </h2>
+            <p className="max-w-2xl text-lg font-medium text-white/65 md:text-xl">
+              {t('catalog.subtitle')}
+            </p>
+          </div>
 
-        {/* Filter Buttons */}
-        <div className="flex justify-center mb-8">
-          <div className="bg-brand-600/90 backdrop-blur-md border border-brand-600/50 rounded-xl p-2 flex space-x-2 shadow-2xl">
+          <div className="inline-flex w-fit rounded-full border border-white/10 bg-white/[0.03] p-1.5 shadow-2xl backdrop-blur-xl">
             <button
               onClick={() => setFilter('all')}
-              className={`px-6 py-2 rounded-lg text-base md:text-lg font-black transition-all duration-200 ${
-                filter === 'all'
-                  ? 'bg-black/90 text-white shadow-lg'
-                  : 'text-white hover:bg-black/30'
+              className={`rounded-full px-5 py-2.5 text-sm font-extrabold transition ${
+                filter === 'all' ? 'bg-white text-black' : 'text-white/65 hover:text-white'
               }`}
             >
               {t('catalog.filter.all')}
             </button>
             <button
               onClick={() => setFilter('nueva')}
-              className={`px-6 py-2 rounded-lg text-base md:text-lg font-black transition-all duration-200 ${
-                filter === 'nueva'
-                  ? 'bg-black/90 text-white shadow-lg'
-                  : 'text-white hover:bg-black/30'
+              className={`rounded-full px-5 py-2.5 text-sm font-extrabold transition ${
+                filter === 'nueva' ? 'bg-white text-black' : 'text-white/65 hover:text-white'
               }`}
             >
               {t('catalog.filter.new')}
@@ -354,12 +340,10 @@ const Catalog: React.FC<CatalogProps> = ({ onViewDetails }) => {
           </div>
         </div>
 
-        {/* Grid: más compacto + más columnas en pantallas grandes */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
           {filteredMotorcycles.map((moto) => {
-            const condLabel = moto.condition === 'Nueva'
-              ? t('product.condition.new')
-              : t('product.condition.used');
+            const condLabel =
+              moto.condition === 'Nueva' ? t('product.condition.new') : t('product.condition.used');
 
             const priceNum = Number(moto.price);
             const isPriceValid = Number.isFinite(priceNum) && priceNum > 0;
@@ -369,17 +353,18 @@ const Catalog: React.FC<CatalogProps> = ({ onViewDetails }) => {
             const extraCount = Math.max(0, features.length - shownFeatures.length);
 
             return (
-              <div
+              <article
                 key={moto.id}
-                className="bg-brand-600/95 backdrop-blur-md border border-brand-600/30 rounded-2xl overflow-hidden shadow-2xl transition-all duration-200 hover:shadow-brand-500/30"
+                className="group overflow-hidden rounded-[28px] border border-white/10 bg-[#121315] shadow-[0_20px_70px_rgba(0,0,0,0.35)] transition duration-300 hover:-translate-y-1 hover:border-white/20"
               >
-                {/* Imagen: más protagonista, sin recortes agresivos */}
-                <div className="relative bg-white">
-                  <div className="aspect-[4/3] w-full overflow-hidden">
+                <div className="relative overflow-hidden border-b border-white/8 bg-[radial-gradient(circle_at_top,#1b1d21,transparent_65%)]">
+                  <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/30" />
+
+                  <div className="aspect-[4/3] w-full overflow-hidden p-5">
                     <img
                       src={moto.image || '/fallback.png'}
                       alt={moto.name || t('image.altFallback')}
-                      className="w-full h-full object-contain p-2"
+                      className="h-full w-full object-contain transition duration-500 group-hover:scale-[1.03]"
                       loading="lazy"
                       onError={(e) => {
                         const target = e.currentTarget as HTMLImageElement;
@@ -389,113 +374,119 @@ const Catalog: React.FC<CatalogProps> = ({ onViewDetails }) => {
                     />
                   </div>
 
-                  {/* Badges */}
-                  <div className="absolute top-3 left-3 flex items-center gap-2">
-                    <span
-                      className={`px-3 py-1 rounded-full text-xs font-extrabold ${
-                        moto.condition === 'Nueva'
-                          ? 'bg-black text-white'
-                          : 'bg-white text-black'
-                      }`}
-                    >
+                  <div className="absolute left-4 top-4 flex flex-wrap items-center gap-2">
+                    <span className="rounded-full border border-white/10 bg-black/60 px-3 py-1 text-[11px] font-extrabold uppercase tracking-[0.2em] text-white">
                       {condLabel}
                     </span>
 
                     {moto.featured && (
-                      <span className="px-3 py-1 rounded-full text-xs font-extrabold bg-black/90 text-white border border-white/15">
+                      <span className="rounded-full border border-brand/30 bg-brand/15 px-3 py-1 text-[11px] font-extrabold uppercase tracking-[0.2em] text-brand">
                         {t('product.badge.featured')}
                       </span>
                     )}
                   </div>
 
-                  {/* Favorite */}
-                  <div className="absolute top-3 right-3">
-                    <button
-                      type="button"
-                      onClick={() => toggleFavorite(moto.id)}
-                      className="p-2 rounded-full bg-black/80 hover:bg-black transition-colors border border-white/20"
-                      aria-label={favorites.includes(moto.id) ? t('favorites.remove') : t('favorites.add')}
-                      title={favorites.includes(moto.id) ? t('favorites.remove') : t('favorites.add')}
-                    >
-                      <Heart
-                        className="w-5 h-5"
-                        color={favorites.includes(moto.id) ? '#ff6b00' : '#ffffff'}
-                        fill={favorites.includes(moto.id) ? '#ff6b00' : 'none'}
-                      />
-                    </button>
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() => toggleFavorite(moto.id)}
+                    className="absolute right-4 top-4 rounded-full border border-white/10 bg-black/60 p-2.5 transition hover:bg-black/80"
+                    aria-label={favorites.includes(moto.id) ? t('favorites.remove') : t('favorites.add')}
+                    title={favorites.includes(moto.id) ? t('favorites.remove') : t('favorites.add')}
+                  >
+                    <Heart
+                      className="h-5 w-5"
+                      color={favorites.includes(moto.id) ? '#39ff14' : '#ffffff'}
+                      fill={favorites.includes(moto.id) ? '#39ff14' : 'none'}
+                    />
+                  </button>
                 </div>
 
-                {/* Contenido: más compacto */}
-                <div className="p-4">
-                  <h3 className="text-white font-black leading-tight text-lg md:text-xl">
-                    {moto.name}
-                  </h3>
+                <div className="space-y-5 p-6">
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <h3 className="text-2xl font-black leading-tight text-white">{moto.name}</h3>
+                      <p className="mt-1 text-sm font-semibold uppercase tracking-[0.16em] text-white/45">
+                        {moto.brand} • {moto.model}
+                      </p>
+                    </div>
 
-                  <p className="text-white/90 text-sm font-bold mt-1">
-                    {moto.brand} • {moto.model}
-                  </p>
+                    {isPriceValid && (
+                      <div className="shrink-0 text-right">
+                        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/40">
+                          Price
+                        </p>
+                        <p className="text-xl font-black text-white">{fmtMoney(priceNum)}</p>
+                      </div>
+                    )}
+                  </div>
 
-                  {/* specs compactos */}
-                  <div className="mt-3 flex items-center justify-between text-white/95">
-                    <div className="flex items-center gap-2 text-sm font-bold">
-                      <Calendar className="w-4 h-4" />
-                      <span>{moto.year}</span>
+                  <div className="grid grid-cols-2 gap-3 text-sm text-white/70 md:grid-cols-3">
+                    <div className="rounded-2xl border border-white/8 bg-white/[0.03] px-4 py-3">
+                      <div className="mb-2 flex items-center gap-2 text-white/40">
+                        <Calendar className="h-4 w-4" />
+                        <span className="text-[11px] font-bold uppercase tracking-[0.18em]">Year</span>
+                      </div>
+                      <p className="font-extrabold text-white">{moto.year}</p>
                     </div>
 
                     {moto.engine && (
-                      <div className="flex items-center gap-2 text-sm font-semibold">
-                        <Fuel className="w-4 h-4" />
-                        <span>{moto.engine}</span>
+                      <div className="rounded-2xl border border-white/8 bg-white/[0.03] px-4 py-3">
+                        <div className="mb-2 flex items-center gap-2 text-white/40">
+                          <Fuel className="h-4 w-4" />
+                          <span className="text-[11px] font-bold uppercase tracking-[0.18em]">Motor</span>
+                        </div>
+                        <p className="font-extrabold text-white">{moto.engine}</p>
                       </div>
                     )}
 
-                    {moto.mileage && (
-                      <div className="hidden md:flex items-center gap-2 text-sm font-bold">
-                        <Gauge className="w-4 h-4" />
-                        <span>{moto.mileage.toLocaleString()} km</span>
+                    {moto.mileage ? (
+                      <div className="rounded-2xl border border-white/8 bg-white/[0.03] px-4 py-3">
+                        <div className="mb-2 flex items-center gap-2 text-white/40">
+                          <Gauge className="h-4 w-4" />
+                          <span className="text-[11px] font-bold uppercase tracking-[0.18em]">Mileage</span>
+                        </div>
+                        <p className="font-extrabold text-white">{moto.mileage.toLocaleString()} km</p>
+                      </div>
+                    ) : (
+                      <div className="rounded-2xl border border-white/8 bg-white/[0.03] px-4 py-3">
+                        <div className="mb-2 flex items-center gap-2 text-white/40">
+                          <ArrowUpRight className="h-4 w-4" />
+                          <span className="text-[11px] font-bold uppercase tracking-[0.18em]">Ready</span>
+                        </div>
+                        <p className="font-extrabold text-white">In stock</p>
                       </div>
                     )}
                   </div>
 
-                  {/* precio */}
-                  {isPriceValid && (
-                    <p className="mt-3 text-white font-black text-base md:text-lg">
-                      {fmtMoney(priceNum)}
-                    </p>
-                  )}
-
-                  {/* features: limitado para que no agrande la card */}
                   {shownFeatures.length ? (
-                    <div className="mt-3 flex flex-wrap gap-2">
+                    <div className="flex flex-wrap gap-2">
                       {shownFeatures.map((f, idx) => {
                         const label = translateFeature(t, moto.id, f, idx);
                         return (
                           <span
                             key={`${moto.id}-feature-${idx}`}
-                            className="bg-black/70 border border-white/20 text-white text-[11px] px-2 py-1 rounded-lg font-semibold"
+                            className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs font-semibold text-white/75"
                           >
                             {label}
                           </span>
                         );
                       })}
                       {extraCount > 0 && (
-                        <span className="bg-black/70 border border-white/20 text-white text-[11px] px-2 py-1 rounded-lg font-semibold">
+                        <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs font-semibold text-white/75">
                           +{extraCount}
                         </span>
                       )}
                     </div>
                   ) : null}
 
-                  {/* Acciones: compactas y consistentes */}
-                  <div className="mt-4 grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-2 gap-3">
                     <Btn
                       variant="secondary"
                       onClick={() => onViewDetails(moto)}
                       aria-label={`${t('product.viewDetails')} ${moto.name}`}
                       title={t('product.viewDetails')}
                     >
-                      <Eye className="w-4 h-4" />
+                      <Eye className="h-4 w-4" />
                       {t('product.viewDetails')}
                     </Btn>
 
@@ -515,7 +506,6 @@ const Catalog: React.FC<CatalogProps> = ({ onViewDetails }) => {
                         });
                         open();
                       }}
-                      className="border border-white/70"
                     >
                       {t('cart.add')}
                     </Btn>
@@ -525,41 +515,42 @@ const Catalog: React.FC<CatalogProps> = ({ onViewDetails }) => {
                         <button
                           disabled
                           title={t('product.price.toConfirm')}
-                          className="w-full bg-gray-600 text-white px-3 py-2 rounded-xl text-sm font-extrabold opacity-60 cursor-not-allowed"
+                          className="w-full cursor-not-allowed rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm font-extrabold text-white/45"
                         >
                           {t('product.price.toConfirm')}
                         </button>
                       ) : (
                         <AffirmButton
-                          cartItems={[{
-                            name: moto.name,
-                            price: priceNum,
-                            qty: 1,
-                            sku: String(moto.id),
-                            url: window.location.href,
-                          }]}
+                          cartItems={[
+                            {
+                              name: moto.name,
+                              price: priceNum,
+                              qty: 1,
+                              sku: String(moto.id),
+                              url: window.location.href,
+                            },
+                          ]}
                           totalUSD={priceNum}
                         />
                       )}
                     </div>
                   </div>
                 </div>
-              </div>
+              </article>
             );
           })}
         </div>
 
-        <div className="text-center mt-12">
+        <div className="mt-16 text-center">
           <button
             onClick={() => showToast(t('catalog.toast.moreSoon'))}
-            className="bg-brand-600/90 backdrop-blur-md border border-brand-600/50 text-white px-10 py-4 rounded-xl text-lg md:text-xl font-black hover:bg-brand-700 transition-all duration-200 shadow-2xl"
+            className="rounded-full border border-white/12 bg-white/[0.04] px-8 py-4 text-sm font-extrabold uppercase tracking-[0.18em] text-white transition hover:bg-white/[0.08]"
           >
             {t('catalog.cta.moreBikes')}
           </button>
         </div>
       </div>
 
-      {/* Toast global */}
       <SimpleToast show={toast.show} text={toast.text} onClose={() => setToast({ show: false, text: '' })} />
     </section>
   );

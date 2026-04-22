@@ -1,15 +1,14 @@
 import React from 'react';
-import { MapPin, Phone, Clock, MessageCircle } from 'lucide-react';
-import UnderlineGrow from "../components/UnderlineGrow";
-import { useI18n } from "../i18n/I18nProvider";
+import { MapPin, Phone, Clock, MessageCircle, ArrowUpRight } from 'lucide-react';
+import UnderlineGrow from './UnderlineGrow';
+import { useI18n } from '../i18n/I18nProvider';
 
 interface ContactProps {
   onPhoneCall: () => void;
   onWhatsApp: () => void;
-  onEmail?: () => void; // ✅ ahora opcional
+  onEmail?: () => void;
 }
 
-// helper para form-urlencoded (Netlify Forms)
 const encode = (data: Record<string, string>) =>
   Object.keys(data)
     .map((key) => encodeURIComponent(key) + '=' + encodeURIComponent(data[key] ?? ''))
@@ -38,10 +37,11 @@ const Contact: React.FC<ContactProps> = ({ onPhoneCall, onWhatsApp }) => {
     if (!formData.lastName.trim()) newErrors.lastName = t('contact.errors.lastNameRequired');
 
     if (!formData.email.trim()) newErrors.email = t('contact.errors.emailRequired');
-    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) newErrors.email = t('contact.errors.emailInvalid');
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      newErrors.email = t('contact.errors.emailInvalid');
+    }
 
     if (!formData.phone.trim()) newErrors.phone = t('contact.errors.phoneRequired');
-
     if (!formData.message.trim()) newErrors.message = t('contact.errors.messageRequired');
 
     setErrors(newErrors);
@@ -105,8 +105,7 @@ const Contact: React.FC<ContactProps> = ({ onPhoneCall, onWhatsApp }) => {
 
   const handleGoogleMaps = () => {
     window.open(
-      'https://www.google.com/maps/search/?api=1&query=' +
-        encodeURIComponent(STORE_ADDRESS_TEXT),
+      'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(STORE_ADDRESS_TEXT),
       '_blank'
     );
   };
@@ -122,25 +121,34 @@ const Contact: React.FC<ContactProps> = ({ onPhoneCall, onWhatsApp }) => {
     },
   ] as const;
 
+  const inputClass =
+    'w-full rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 text-white placeholder:text-white/30 outline-none transition focus:border-brand/40 focus:bg-white/[0.05]';
+
   return (
-    <section id="contacto" className="py-20 bg-black">
-      <div className="container mx-auto px-4">
-        <div className="text-center mb-16">
-          <h2 className="text-4xl md:text-6xl font-black text-white mb-6">
+    <section id="contacto" className="bg-[#0b0b0c] py-24 md:py-32">
+      <div className="container mx-auto px-6">
+        <div className="mb-16 max-w-3xl">
+          <p className="mb-4 text-sm font-semibold uppercase tracking-[0.22em] text-white/45">
+            Contact & financing
+          </p>
+          <h2 className="mb-6 text-4xl font-black leading-none text-white md:text-6xl">
             <UnderlineGrow>{t('contact.title')}</UnderlineGrow>
           </h2>
-          <p className="text-white text-xl md:text-2xl max-w-3xl mx-auto font-bold">
-            {t('contact.subtitle')}
-          </p>
+          <p className="text-lg font-medium text-white/65 md:text-xl">{t('contact.subtitle')}</p>
         </div>
 
-        <div className="grid lg:grid-cols-2 gap-12">
-          <div>
-            <h3 className="text-3xl font-black text-white mb-8">
-              {t('contact.info.title')}
-            </h3>
+        <div className="grid gap-8 xl:grid-cols-[0.9fr_1.1fr]">
+          <div className="rounded-[30px] border border-white/10 bg-white/[0.03] p-7 md:p-8">
+            <div className="mb-10">
+              <h3 className="mb-4 text-2xl font-black text-white md:text-3xl">
+                {t('contact.info.title')}
+              </h3>
+              <p className="max-w-md text-white/60">
+                Reach our team directly for product questions, financing details and availability.
+              </p>
+            </div>
 
-            <div className="space-y-6 mb-8">
+            <div className="space-y-4">
               {contactInfo.map((info, index) => (
                 <button
                   key={index}
@@ -148,19 +156,18 @@ const Contact: React.FC<ContactProps> = ({ onPhoneCall, onWhatsApp }) => {
                     if (info.id === 'phone') onPhoneCall();
                     else if (info.id === 'address') handleGoogleMaps();
                   }}
-                  className="flex items-start space-x-4 w-full text-left hover:bg-brand-600/10 p-3 rounded-lg"
+                  className="flex w-full items-start gap-4 rounded-[22px] border border-white/8 bg-black/20 p-4 text-left transition hover:border-white/15 hover:bg-white/[0.03]"
                   disabled={info.id === 'hours'}
                 >
-                  <div className="bg-brand-600 p-3 rounded-lg">
-                    <info.icon className="w-6 h-6 text-white" />
+                  <div className="rounded-2xl border border-brand/20 bg-brand/10 p-3 text-brand">
+                    <info.icon className="h-5 w-5" />
                   </div>
-                  <div>
-                    <h4 className="text-xl font-black text-white mb-1">
+
+                  <div className="min-w-0">
+                    <h4 className="mb-1 text-sm font-bold uppercase tracking-[0.18em] text-white/45">
                       {t(info.titleKey)}
                     </h4>
-                    <p className="text-white text-lg font-bold">
-                      {info.content}
-                    </p>
+                    <p className="text-base font-semibold text-white md:text-lg">{info.content}</p>
                   </div>
                 </button>
               ))}
@@ -168,53 +175,130 @@ const Contact: React.FC<ContactProps> = ({ onPhoneCall, onWhatsApp }) => {
 
             <button
               onClick={onWhatsApp}
-              className="w-full bg-green-600 text-white px-8 py-4 rounded-lg text-xl font-black hover:bg-green-700 flex items-center justify-center gap-2"
+              className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-full bg-white px-6 py-4 text-sm font-extrabold uppercase tracking-[0.18em] text-black transition hover:bg-brand"
             >
-              <MessageCircle className="w-5 h-5" />
+              <MessageCircle className="h-5 w-5" />
               {t('contact.whats.cta')}
             </button>
           </div>
 
-          <div>
-            <h3 className="text-3xl font-black text-white mb-8">
-              {t('contact.form.title')}
-            </h3>
+          <div className="rounded-[30px] border border-white/10 bg-[#111215] p-7 md:p-8">
+            <div className="mb-8 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+              <div>
+                <h3 className="text-2xl font-black text-white md:text-3xl">
+                  {t('contact.form.title')}
+                </h3>
+                <p className="mt-2 max-w-lg text-white/55">
+                  Send us your details and we’ll get back to you with pricing, financing and product information.
+                </p>
+              </div>
 
-            <form onSubmit={handleSubmitForNetlify} className="space-y-6">
+              <span className="inline-flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.16em] text-brand">
+                Secure form <ArrowUpRight className="h-4 w-4" />
+              </span>
+            </div>
+
+            <form
+              onSubmit={handleSubmitForNetlify}
+              className="space-y-5"
+              name="contact"
+              data-netlify="true"
+              data-netlify-honeypot="bot-field"
+            >
               <input type="hidden" name="form-name" value="contact" />
+              <input type="hidden" name="bot-field" value={formData['bot-field']} />
 
-              <input
-                name="firstName"
-                value={formData.firstName}
-                onChange={handleInputChange}
-                placeholder="First Name"
-                className="w-full p-3 rounded"
-                required
-              />
+              <div className="grid gap-5 md:grid-cols-2">
+                <div>
+                  <input
+                    name="firstName"
+                    value={formData.firstName}
+                    onChange={handleInputChange}
+                    placeholder="First name"
+                    className={inputClass}
+                    required
+                  />
+                  {errors.firstName && <p className="mt-2 text-sm text-red-400">{errors.firstName}</p>}
+                </div>
 
-              <input
-                name="email"
-                value={formData.email}
-                onChange={handleInputChange}
-                placeholder="Email"
-                className="w-full p-3 rounded"
-                required
-              />
+                <div>
+                  <input
+                    name="lastName"
+                    value={formData.lastName}
+                    onChange={handleInputChange}
+                    placeholder="Last name"
+                    className={inputClass}
+                    required
+                  />
+                  {errors.lastName && <p className="mt-2 text-sm text-red-400">{errors.lastName}</p>}
+                </div>
+              </div>
 
-              <textarea
-                name="message"
-                value={formData.message}
-                onChange={handleInputChange}
-                placeholder="Message"
-                className="w-full p-3 rounded"
-                required
-              />
+              <div className="grid gap-5 md:grid-cols-2">
+                <div>
+                  <input
+                    name="email"
+                    value={formData.email}
+                    onChange={handleInputChange}
+                    placeholder="Email"
+                    className={inputClass}
+                    required
+                  />
+                  {errors.email && <p className="mt-2 text-sm text-red-400">{errors.email}</p>}
+                </div>
+
+                <div>
+                  <input
+                    name="phone"
+                    value={formData.phone}
+                    onChange={handleInputChange}
+                    placeholder="Phone"
+                    className={inputClass}
+                    required
+                  />
+                  {errors.phone && <p className="mt-2 text-sm text-red-400">{errors.phone}</p>}
+                </div>
+              </div>
+
+              <div>
+                <select
+                  name="reason"
+                  value={formData.reason}
+                  onChange={handleInputChange}
+                  className={inputClass}
+                >
+                  <option value="info">General information</option>
+                  <option value="pricing">Pricing</option>
+                  <option value="financing">Financing</option>
+                  <option value="availability">Availability</option>
+                </select>
+              </div>
+
+              <div>
+                <textarea
+                  name="message"
+                  value={formData.message}
+                  onChange={handleInputChange}
+                  placeholder="Tell us what you're looking for"
+                  rows={6}
+                  className={`${inputClass} resize-none`}
+                  required
+                />
+                {errors.message && <p className="mt-2 text-sm text-red-400">{errors.message}</p>}
+              </div>
 
               <button
                 type="submit"
-                className="w-full bg-white text-black py-3 font-bold"
+                className="inline-flex w-full items-center justify-center rounded-full bg-white px-6 py-4 text-sm font-extrabold uppercase tracking-[0.18em] text-black transition hover:bg-brand disabled:opacity-70"
+                disabled={status === 'sending'}
               >
-                Send
+                {status === 'sending'
+                  ? 'Sending...'
+                  : status === 'sent'
+                  ? 'Message sent'
+                  : status === 'error'
+                  ? 'Try again'
+                  : 'Send message'}
               </button>
             </form>
           </div>
