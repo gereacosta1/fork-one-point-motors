@@ -28,7 +28,6 @@ const toCents = (usd: unknown) => {
 
 const FALLBACK_NAME = { first: "Online", last: "Customer" };
 
-// ✅ Nueva dirección
 const FALLBACK_ADDR = {
   line1: "821 NE 79th St",
   city: "Miami",
@@ -58,6 +57,7 @@ function Toast({
   onClose: () => void;
 }) {
   if (!show) return null;
+
   const base =
     "fixed bottom-6 left-1/2 -translate-x-1/2 z-[9999] px-4 py-3 rounded-xl shadow-2xl border text-sm font-semibold";
   const palette =
@@ -66,6 +66,7 @@ function Toast({
       : type === "error"
       ? "bg-red-600/95 text-white border-red-400"
       : "bg-black/90 text-white border-white/20";
+
   return (
     <div className={`${base} ${palette}`} role="status" onClick={onClose}>
       {message}
@@ -91,15 +92,16 @@ function NiceModal({
   onClose: () => void;
 }) {
   if (!open) return null;
+
   return (
     <div className="fixed inset-0 z-[9998] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative w-[95%] max-w-md rounded-2xl bg-black/95 border border-brand/40 shadow-2xl p-6">
-        <div className="flex items-start justify-between mb-3">
+      <div className="relative w-[95%] max-w-md rounded-2xl border border-brand/40 bg-black/95 p-6 shadow-2xl">
+        <div className="mb-3 flex items-start justify-between">
           <h3 className="text-xl font-black text-white">{title}</h3>
           <button
             onClick={onClose}
-            className="text-white/70 hover:text-white transition"
+            className="text-white/70 transition hover:text-white"
             aria-label="Close"
             title="Close"
           >
@@ -107,13 +109,13 @@ function NiceModal({
           </button>
         </div>
 
-        <div className="text-white/90 mb-6 leading-relaxed">{children}</div>
+        <div className="mb-6 leading-relaxed text-white/90">{children}</div>
 
         <div className="flex items-center justify-end gap-3">
           {secondaryLabel ? (
             <button
               onClick={onClose}
-              className="px-4 py-2 rounded-lg border border-white/20 text-white hover:bg-white/10 transition"
+              className="rounded-lg border border-white/20 px-4 py-2 text-white transition hover:bg-white/10"
             >
               {secondaryLabel}
             </button>
@@ -122,7 +124,7 @@ function NiceModal({
           {primaryLabel ? (
             <button
               onClick={onPrimary}
-              className="px-4 py-2 rounded-lg bg-brand text-black font-black hover:bg-brand-hover transition"
+              className="rounded-lg bg-brand px-4 py-2 font-black text-black transition hover:bg-brand-hover"
             >
               {primaryLabel}
             </button>
@@ -133,7 +135,12 @@ function NiceModal({
   );
 }
 
-export default function AffirmButton({ cartItems, totalUSD, shippingUSD = 0, taxUSD = 0 }: Props) {
+export default function AffirmButton({
+  cartItems,
+  totalUSD,
+  shippingUSD = 0,
+  taxUSD = 0,
+}: Props) {
   const PUBLIC_KEY = import.meta.env.VITE_AFFIRM_PUBLIC_KEY || "";
 
   const [ready, setReady] = useState(false);
@@ -149,12 +156,21 @@ export default function AffirmButton({ cartItems, totalUSD, shippingUSD = 0, tax
     message: "",
   });
 
-  const showToast = (type: "success" | "error" | "info", message: string, ms = 2500) => {
+  const showToast = (
+    type: "success" | "error" | "info",
+    message: string,
+    ms = 2500
+  ) => {
     setToast({ show: true, type, message });
     window.setTimeout(() => setToast((s) => ({ ...s, show: false })), ms);
   };
 
-  const [modal, setModal] = useState<{ open: boolean; title: string; body: string; retry?: boolean }>({
+  const [modal, setModal] = useState<{
+    open: boolean;
+    title: string;
+    body: string;
+    retry?: boolean;
+  }>({
     open: false,
     title: "",
     body: "",
@@ -169,6 +185,7 @@ export default function AffirmButton({ cartItems, totalUSD, shippingUSD = 0, tax
       console.error("Falta VITE_AFFIRM_PUBLIC_KEY");
       return;
     }
+
     loadAffirm(PUBLIC_KEY)
       .then(() => setReady(true))
       .catch((e) => {
@@ -195,7 +212,10 @@ export default function AffirmButton({ cartItems, totalUSD, shippingUSD = 0, tax
         const display_name = (it.name || `Item ${idx + 1}`).toString().slice(0, 120);
         const unit_price = toCents(it.price);
         const qty = Math.max(1, Math.trunc(Number(it.qty) || 1));
-        const sku = (it.sku ?? `SKU-${idx + 1}`).toString().replace(/\s+/g, "-").slice(0, 64);
+        const sku = (it.sku ?? `SKU-${idx + 1}`)
+          .toString()
+          .replace(/\s+/g, "-")
+          .slice(0, 64);
 
         const item: any = {
           display_name,
@@ -222,21 +242,20 @@ export default function AffirmButton({ cartItems, totalUSD, shippingUSD = 0, tax
 
   const merchantBase = useMemo(() => window.location.origin, []);
 
-  // ✅ Capturamos SOLO en confirm.html: aquí solo guardamos token + redirigimos.
   const getAffirmCallbacks = (orderId: string, totalCents: number) => ({
     onSuccess: (res: { checkout_token: string }) => {
       try {
         sessionStorage.setItem("affirm_order_id", orderId);
         sessionStorage.setItem("affirm_order_amount_cents", String(totalCents));
-        sessionStorage.setItem("affirm_amount_cents", String(totalCents)); // compatibilidad opcional
+        sessionStorage.setItem("affirm_amount_cents", String(totalCents));
         sessionStorage.setItem("affirm_checkout_token", res.checkout_token);
         sessionStorage.removeItem("affirm_captured_order_id");
       } catch {}
 
-      // Redirección explícita para que confirm.html siempre tenga token
-      window.location.href = `/affirm/confirm.html?checkout_token=${encodeURIComponent(res.checkout_token)}`;
+      window.location.href = `/affirm/confirm.html?checkout_token=${encodeURIComponent(
+        res.checkout_token
+      )}`;
 
-      // Nota: no hacemos setOpening(false) aquí porque navegamos; igualmente lo seteamos por prolijidad.
       setOpening(false);
     },
 
@@ -255,7 +274,8 @@ export default function AffirmButton({ cartItems, totalUSD, shippingUSD = 0, tax
       console.warn("Affirm onValidationError", err);
       setOpening(false);
 
-      const fields = err?.fields && Array.isArray(err.fields) ? err.fields.join(", ") : null;
+      const fields =
+        err?.fields && Array.isArray(err.fields) ? err.fields.join(", ") : null;
 
       setModal({
         open: true,
@@ -285,7 +305,9 @@ export default function AffirmButton({ cartItems, totalUSD, shippingUSD = 0, tax
     const affirm = (window as any).affirm;
     try {
       affirm.checkout(lastCheckoutPayload);
-      affirm.checkout.open(getAffirmCallbacks(lastCheckoutPayload.order_id, lastTotalCents));
+      affirm.checkout.open(
+        getAffirmCallbacks(lastCheckoutPayload.order_id, lastTotalCents)
+      );
     } catch (e) {
       console.error("Reintento falló:", e);
       showToast("error", "No se pudo reintentar el pago.");
@@ -303,10 +325,18 @@ export default function AffirmButton({ cartItems, totalUSD, shippingUSD = 0, tax
     const shippingCents = toCents(shippingUSD);
     const taxCents = toCents(taxUSD);
 
-    const sumItems = items.reduce((acc: number, it: any) => acc + it.unit_price * it.qty, 0);
+    const sumItems = items.reduce(
+      (acc: number, it: any) => acc + it.unit_price * it.qty,
+      0
+    );
 
-    const totalCentsFromProp = Number.isFinite(Number(totalUSD)) ? Math.round(Number(totalUSD) * 100) : NaN;
-    const totalCents = Number.isFinite(totalCentsFromProp) ? totalCentsFromProp : sumItems + shippingCents + taxCents;
+    const totalCentsFromProp = Number.isFinite(Number(totalUSD))
+      ? Math.round(Number(totalUSD) * 100)
+      : NaN;
+
+    const totalCents = Number.isFinite(totalCentsFromProp)
+      ? totalCentsFromProp
+      : sumItems + shippingCents + taxCents;
 
     if (!Number.isFinite(totalCents) || totalCents < MIN_TOTAL_CENTS) {
       setModal({
@@ -320,11 +350,10 @@ export default function AffirmButton({ cartItems, totalUSD, shippingUSD = 0, tax
 
     const orderId = `ORDER-${Date.now()}`;
 
-    // ✅ Guardamos lo mínimo para confirm.html (keys correctas)
     try {
       sessionStorage.setItem("affirm_order_id", orderId);
       sessionStorage.setItem("affirm_order_amount_cents", String(totalCents));
-      sessionStorage.setItem("affirm_amount_cents", String(totalCents)); // compatibilidad opcional
+      sessionStorage.setItem("affirm_amount_cents", String(totalCents));
       sessionStorage.removeItem("affirm_captured_order_id");
     } catch {}
 
@@ -366,7 +395,10 @@ export default function AffirmButton({ cartItems, totalUSD, shippingUSD = 0, tax
   if (!ready) {
     return (
       <>
-        <button disabled className="bg-black/60 text-white px-5 py-3 rounded-xl border border-white/10">
+        <button
+          disabled
+          className="inline-flex h-[48px] w-full items-center justify-center rounded-full border border-white/12 bg-white/[0.03] px-5 text-sm font-extrabold text-white/55"
+        >
           Cargando Affirm…
         </button>
 
@@ -386,12 +418,7 @@ export default function AffirmButton({ cartItems, totalUSD, shippingUSD = 0, tax
         type="button"
         onClick={handleClick}
         disabled={opening}
-        className="bg-white text-black font-black px-5 py-3 rounded-xl text-lg
-                   border-2 border-white shadow-md
-                   hover:bg-brand hover:border-brand hover:text-black
-                   transition-all duration-300
-                   disabled:opacity-60
-                   disabled:hover:bg-white disabled:hover:border-white disabled:hover:text-black"
+        className="inline-flex h-[48px] w-full items-center justify-center rounded-full border border-white/12 bg-white px-5 text-sm font-extrabold text-black transition-all duration-300 hover:border-brand hover:bg-brand hover:text-black disabled:opacity-60 disabled:hover:border-white/12 disabled:hover:bg-white disabled:hover:text-black"
       >
         {opening ? "Abriendo…" : "Pay with Affirm"}
       </button>
