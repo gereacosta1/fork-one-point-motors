@@ -1,5 +1,5 @@
 import React from "react";
-import { X, Trash2, Plus, Minus } from "lucide-react";
+import { X, Trash2, Plus, Minus, ShoppingCart } from "lucide-react";
 import { useCart } from "../context/CartContext";
 import { useI18n } from "../i18n/I18nProvider";
 import PayWithAffirm from "./PayWithAffirm";
@@ -26,12 +26,38 @@ const QUICK_ITEMS = [
   },
 ] as const;
 
+const FALLBACK_IMAGE = "/IMG/fallback.png";
+
 const CartDrawer: React.FC = () => {
   const { t, fmtMoney } = useI18n();
-  const { items, isOpen, close, removeItem, setQty, totalUSD, clear, addItem } = useCart();
 
-  const handleDec = (id: string, qty: number) => setQty(id, Math.max(1, qty - 1));
-  const handleInc = (id: string, qty: number) => setQty(id, qty + 1);
+  const {
+    items,
+    isOpen,
+    close,
+    removeItem,
+    setQty,
+    totalUSD,
+    clear,
+    addItem,
+    itemCount,
+  } = useCart();
+
+  const handleDec = (id: string, qty: number) => {
+    setQty(id, Math.max(1, qty - 1));
+  };
+
+  const handleInc = (id: string, qty: number) => {
+    setQty(id, qty + 1);
+  };
+
+  const handleImageError = (event: React.SyntheticEvent<HTMLImageElement>) => {
+    const img = event.currentTarget;
+
+    if (!img.src.includes("fallback")) {
+      img.src = FALLBACK_IMAGE;
+    }
+  };
 
   const addQuick = (q: (typeof QUICK_ITEMS)[number]) => {
     addItem({
@@ -40,6 +66,7 @@ const CartDrawer: React.FC = () => {
       price: q.price,
       qty: 1,
       image: q.image,
+      imageUrl: q.image,
       sku: q.id,
       url: "/catalog",
     });
@@ -47,41 +74,55 @@ const CartDrawer: React.FC = () => {
 
   return (
     <div
-      className={`fixed inset-0 z-[10000] ${isOpen ? "pointer-events-auto" : "pointer-events-none"}`}
+      className={`fixed inset-0 z-[10000] ${
+        isOpen ? "pointer-events-auto" : "pointer-events-none"
+      }`}
       aria-hidden={!isOpen}
     >
-      {/* Overlay */}
       <div
-        className={`absolute inset-0 bg-black/50 transition-opacity ${isOpen ? "opacity-100" : "opacity-0"}`}
+        className={`absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity ${
+          isOpen ? "opacity-100" : "opacity-0"
+        }`}
         onClick={close}
       />
 
-      {/* Drawer */}
       <aside
-        className={`absolute right-0 top-0 h-full w-full max-w-md bg-black text-white border-l border-white/10 shadow-2xl transform transition-transform
-        ${isOpen ? "translate-x-0" : "translate-x-full"}`}
+        className={`absolute right-0 top-0 flex h-full w-full max-w-md flex-col border-l border-white/10 bg-[#050505] text-white shadow-2xl transition-transform duration-300 ${
+          isOpen ? "translate-x-0" : "translate-x-full"
+        }`}
         role="dialog"
+        aria-modal="true"
         aria-label={t("cart.title")}
       >
-        {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-white/10">
-          <h3 className="text-xl font-black">{t("cart.title")}</h3>
+        <div className="flex items-center justify-between border-b border-white/10 p-4">
+          <div>
+            <h3 className="text-xl font-black">{t("cart.title")}</h3>
+            <p className="text-xs text-white/50">
+              {itemCount} {itemCount === 1 ? "item" : "items"}
+            </p>
+          </div>
+
           <button
+            type="button"
             onClick={close}
-            className="p-2 rounded hover:bg-white/10"
+            className="rounded-full p-2 transition hover:bg-white/10"
             aria-label={t("modal.close")}
           >
-            <X className="w-5 h-5" />
+            <X className="h-5 w-5" />
           </button>
         </div>
 
-        {/* Content */}
-        <div className="p-4 space-y-4 overflow-y-auto" style={{ maxHeight: "calc(100vh - 220px)" }}>
-          {/* Quick Add */}
-          <div className="border border-white/10 rounded-xl p-3">
-            <div className="flex items-center justify-between mb-2">
-              <p className="font-black text-sm">Quick Add</p>
-              <p className="text-xs text-white/60">Tap para agregar</p>
+        <div className="flex-1 space-y-4 overflow-y-auto p-4">
+          <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-3">
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <div>
+                <p className="text-sm font-black">Quick Add</p>
+                <p className="text-xs text-white/50">
+                  Add popular products fast
+                </p>
+              </div>
+
+              <ShoppingCart className="h-4 w-4 text-white/40" />
             </div>
 
             <div className="flex gap-2 overflow-x-auto pb-1">
@@ -90,106 +131,127 @@ const CartDrawer: React.FC = () => {
                   key={q.id}
                   type="button"
                   onClick={() => addQuick(q)}
-                  className="min-w-[160px] flex gap-2 items-center border border-white/10 rounded-lg p-2 hover:bg-white/5 transition"
+                  className="flex min-w-[165px] items-center gap-2 rounded-xl border border-white/10 bg-black/30 p-2 text-left transition hover:border-white/20 hover:bg-white/5"
                 >
                   <img
                     src={q.image}
                     alt={q.name}
-                    className="w-12 h-12 rounded object-cover bg-white/5"
-                    onError={(e) => {
-                      const img = e.currentTarget;
-                      if (!img.src.includes("fallback")) img.src = "/IMG/fallback.png";
-                    }}
+                    className="h-12 w-12 rounded-lg bg-white/5 object-cover"
+                    onError={handleImageError}
                   />
-                  <div className="text-left min-w-0">
-                    <p className="text-xs font-bold truncate">{q.name}</p>
+
+                  <div className="min-w-0">
+                    <p className="truncate text-xs font-bold">{q.name}</p>
                     <p className="text-xs text-white/70">{fmtMoney(q.price)}</p>
-                    <p className="text-[11px] text-white/50">Add to cart</p>
+                    <p className="text-[11px] text-white/40">Add to cart</p>
                   </div>
                 </button>
               ))}
             </div>
           </div>
 
-          {/* Items */}
           {items.length === 0 ? (
-            <p className="text-white/70">{t("cart.empty")}</p>
+            <div className="rounded-2xl border border-dashed border-white/10 p-6 text-center">
+              <ShoppingCart className="mx-auto mb-3 h-8 w-8 text-white/30" />
+              <p className="text-sm text-white/70">{t("cart.empty")}</p>
+            </div>
           ) : (
-            items.map((it) => (
-              <div key={it.id} className="flex gap-3 border border-white/10 rounded-lg p-3">
-                <img
-                  src={it.image || "/IMG/fallback.png"}
-                  alt={it.name}
-                  className="w-20 h-20 object-cover rounded"
-                  onError={(e) => {
-                    const img = e.currentTarget;
-                    if (!img.src.includes("fallback")) img.src = "/IMG/fallback.png";
-                  }}
-                />
+            <div className="space-y-3">
+              {items.map((it) => {
+                const image = it.image || it.imageUrl || FALLBACK_IMAGE;
+                const lineTotal = it.price * it.qty;
 
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <p className="font-bold truncate">{it.name}</p>
-                      <p className="text-sm text-white/70">{fmtMoney(it.price)}</p>
+                return (
+                  <div
+                    key={it.id}
+                    className="flex gap-3 rounded-2xl border border-white/10 bg-white/[0.03] p-3"
+                  >
+                    <img
+                      src={image}
+                      alt={it.name}
+                      className="h-20 w-20 rounded-xl bg-white/5 object-cover"
+                      onError={handleImageError}
+                    />
+
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <p className="truncate font-bold">{it.name}</p>
+                          <p className="text-sm text-white/70">
+                            {fmtMoney(it.price)}
+                          </p>
+
+                          {it.sku && (
+                            <p className="mt-0.5 truncate text-[11px] text-white/35">
+                              SKU: {it.sku}
+                            </p>
+                          )}
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => removeItem(it.id)}
+                          className="rounded-full p-2 text-white/60 transition hover:bg-white/10 hover:text-white"
+                          aria-label={t("cart.remove")}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+
+                      <div className="mt-3 flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => handleDec(it.id, it.qty)}
+                          disabled={it.qty <= 1}
+                          className="rounded-lg bg-white/10 p-2 transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-40"
+                          aria-label="Decrease quantity"
+                        >
+                          <Minus className="h-4 w-4" />
+                        </button>
+
+                        <span className="min-w-9 rounded-lg bg-white/10 px-3 py-1 text-center font-bold">
+                          {it.qty}
+                        </span>
+
+                        <button
+                          type="button"
+                          onClick={() => handleInc(it.id, it.qty)}
+                          className="rounded-lg bg-white/10 p-2 transition hover:bg-white/20"
+                          aria-label="Increase quantity"
+                        >
+                          <Plus className="h-4 w-4" />
+                        </button>
+
+                        <span className="ml-auto font-black">
+                          {fmtMoney(lineTotal)}
+                        </span>
+                      </div>
                     </div>
-
-                    <button
-                      onClick={() => removeItem(it.id)}
-                      className="p-2 rounded hover:bg-white/10"
-                      aria-label={t("cart.remove")}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
                   </div>
-
-                  <div className="mt-2 flex items-center gap-2">
-                    <button
-                      onClick={() => handleDec(it.id, it.qty)}
-                      className="p-2 rounded bg-white/10 hover:bg-white/20"
-                    >
-                      <Minus className="w-4 h-4" />
-                    </button>
-
-                    <span className="px-3 py-1 rounded bg-white/10 font-bold">{it.qty}</span>
-
-                    <button
-                      onClick={() => handleInc(it.id, it.qty)}
-                      className="p-2 rounded bg-white/10 hover:bg-white/20"
-                    >
-                      <Plus className="w-4 h-4" />
-                    </button>
-
-                    <span className="ml-auto font-bold">
-                      {fmtMoney(it.price * it.qty)}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            ))
+                );
+              })}
+            </div>
           )}
         </div>
 
-        {/* Footer */}
-        <div className="p-4 border-t border-white/10 space-y-3">
+        <div className="space-y-3 border-t border-white/10 bg-black/40 p-4">
           <div className="flex items-center justify-between">
-            <span className="text-white/80">{t("cart.total")}</span>
-            <span className="text-xl font-black">{fmtMoney(totalUSD)}</span>
+            <span className="text-sm text-white/70">{t("cart.total")}</span>
+            <span className="text-2xl font-black">{fmtMoney(totalUSD)}</span>
           </div>
 
-          <div className="flex gap-2">
+          <div className="space-y-2">
+            <PayWithAffirm />
+            <PayWithCard />
+
             <button
+              type="button"
               onClick={clear}
               disabled={items.length === 0}
-              className="flex-1 bg-white/10 hover:bg-white/20 text-white px-4 py-3 rounded-lg font-bold disabled:opacity-50"
+              className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-bold text-white transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"
             >
               {t("cart.clear")}
             </button>
-
-            <div className="flex-1 space-y-2">
-              <PayWithAffirm />
-              <PayWithCard />
-            </div>
           </div>
         </div>
       </aside>

@@ -49,6 +49,20 @@ const getOriginFromHeaders = (headers = {}) => {
   return host ? `${proto}://${host}` : "https://www.onepointmotors.com";
 };
 
+const normalizeImageUrl = (url) => {
+  if (!url) return null;
+
+  const value = String(url).trim();
+
+  if (!value) return null;
+
+  if (value.startsWith("http://") || value.startsWith("https://")) {
+    return value;
+  }
+
+  return null;
+};
+
 export async function handler(event) {
   if (event.httpMethod === "OPTIONS") {
     return {
@@ -59,7 +73,10 @@ export async function handler(event) {
   }
 
   if (event.httpMethod !== "POST") {
-    return json(405, { ok: false, error: "Method Not Allowed" });
+    return json(405, {
+      ok: false,
+      error: "Method Not Allowed",
+    });
   }
 
   try {
@@ -71,6 +88,7 @@ export async function handler(event) {
     }
 
     let body = {};
+
     try {
       body = JSON.parse(event.body || "{}");
     } catch {
@@ -98,13 +116,13 @@ export async function handler(event) {
           .slice(0, 120);
 
         const unitAmount = Math.round(toNumber(item?.price) * 100);
-        const quantity = toInt(item?.qty, 1);
+        const quantity = toInt(item?.qty ?? item?.quantity, 1);
+        const image = normalizeImageUrl(item?.image || item?.imageUrl);
 
         if (!name || unitAmount <= 0 || quantity <= 0) {
           return null;
         }
 
-        // Stripe suele exigir mínimo de 50 centavos para USD
         if (unitAmount < 50) {
           return null;
         }
@@ -114,6 +132,7 @@ export async function handler(event) {
             currency: "usd",
             product_data: {
               name,
+              ...(image ? { images: [image] } : {}),
             },
             unit_amount: unitAmount,
           },
@@ -131,8 +150,20 @@ export async function handler(event) {
 
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
-      payment_method_types: ["card", "afterpay_clearpay", "klarna", "zip"],
+
+      // IMPORTANTE:
+      // No agregamos "zip" porque puede romper Stripe Checkout si no está disponible.
+      // Card siempre debe funcionar. Klarna y Afterpay/Clearpay aparecerán solo si Stripe
+      // los tiene disponibles/aprobados para la cuenta, moneda, país y tipo de negocio.
+      payment_method_types: ["card", "klarna", "afterpay_clearpay"],
+
       line_items,
+
+      billing_address_collection: "auto",
+      phone_number_collection: {
+        enabled: true,
+      },
+
       success_url: `${origin}/?card=success&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${origin}/?card=cancel`,
     });

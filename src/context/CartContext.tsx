@@ -1,4 +1,10 @@
-import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 
 export type CartItem = {
   id: string;
@@ -7,6 +13,7 @@ export type CartItem = {
   qty: number;
   sku?: string;
   image?: string;
+  imageUrl?: string;
   url?: string;
 };
 
@@ -20,6 +27,7 @@ type CartContextType = {
   close: () => void;
   isOpen: boolean;
   totalUSD: number;
+  itemCount: number;
 };
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -35,6 +43,21 @@ function safeParse<T>(raw: string | null, fallback: T): T {
   }
 }
 
+const toNumber = (value: unknown): number => {
+  const num = Number(value);
+  return Number.isFinite(num) ? num : 0;
+};
+
+const toQty = (value: unknown): number => {
+  const num = Math.trunc(toNumber(value));
+  return Number.isFinite(num) && num > 0 ? num : 1;
+};
+
+const cleanText = (value: unknown): string | undefined => {
+  const text = String(value || "").trim();
+  return text.length > 0 ? text : undefined;
+};
+
 function normalizeItems(items: unknown): CartItem[] {
   if (!Array.isArray(items)) return [];
 
@@ -42,50 +65,68 @@ function normalizeItems(items: unknown): CartItem[] {
     .map((it) => {
       const item = it as Partial<CartItem>;
 
+      const id = cleanText(item.id);
+      const name = cleanText(item.name);
+      const price = toNumber(item.price);
+      const qty = toQty(item.qty);
+      const sku = cleanText(item.sku);
+      const image = cleanText(item.image);
+      const imageUrl = cleanText(item.imageUrl);
+      const url = cleanText(item.url);
+
+      if (!id || !name || price <= 0) {
+        return null;
+      }
+
       return {
-        id: String(item.id ?? "").trim(),
-        name: String(item.name ?? "").trim(),
-        price: Number(item.price ?? 0),
-        qty: Math.max(1, Math.trunc(Number(item.qty ?? 1))),
-        sku: item.sku ? String(item.sku).trim() : undefined,
-        image: item.image ? String(item.image).trim() : undefined,
-        url: item.url ? String(item.url).trim() : undefined,
+        id,
+        name,
+        price,
+        qty,
+        ...(sku ? { sku } : {}),
+        ...(image ? { image } : {}),
+        ...(imageUrl ? { imageUrl } : {}),
+        ...(url ? { url } : {}),
       };
     })
-    .filter(
-      (item) =>
-        item.id.length > 0 &&
-        item.name.length > 0 &&
-        Number.isFinite(item.price) &&
-        item.price > 0 &&
-        Number.isFinite(item.qty) &&
-        item.qty > 0
-    );
+    .filter((item): item is CartItem => Boolean(item));
 }
 
-export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
   const [items, setItems] = useState<CartItem[]>([]);
   const [isOpen, setIsOpen] = useState(false);
+  const [hasLoadedCart, setHasLoadedCart] = useState(false);
 
   useEffect(() => {
     try {
-      const saved = safeParse<{ items?: unknown[] }>(localStorage.getItem(STORAGE_KEY), {});
+      const saved = safeParse<{ items?: unknown[] }>(
+        localStorage.getItem(STORAGE_KEY),
+        {}
+      );
+
       setItems(normalizeItems(saved.items));
     } catch {
       setItems([]);
+    } finally {
+      setHasLoadedCart(true);
     }
   }, []);
 
   useEffect(() => {
+    if (!hasLoadedCart) return;
+
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify({ items }));
     } catch {
-      // ignore storage write failures
+      // Ignore storage write failures.
     }
-  }, [items]);
+  }, [items, hasLoadedCart]);
 
   const addItem = (item: CartItem) => {
     const normalized = normalizeItems([item])[0];
+
     if (!normalized) return;
 
     setItems((prev) => {
@@ -93,10 +134,13 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (existingIndex >= 0) {
         const next = [...prev];
+
         next[existingIndex] = {
           ...next[existingIndex],
+          ...normalized,
           qty: next[existingIndex].qty + normalized.qty,
         };
+
         return next;
       }
 
@@ -107,18 +151,21 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const removeItem = (id: string) => {
-    const normalizedId = String(id).trim();
+    const normalizedId = String(id || "").trim();
+
+    if (!normalizedId) return;
+
     setItems((prev) => prev.filter((item) => item.id !== normalizedId));
   };
 
   const setQty = (id: string, qty: number) => {
-    const normalizedId = String(id).trim();
+    const normalizedId = String(id || "").trim();
     const normalizedQty = Math.trunc(Number(qty));
 
     if (!normalizedId) return;
 
     if (!Number.isFinite(normalizedQty) || normalizedQty <= 0) {
-      removeItem(normalizedId);
+      setItems((prev) => prev.filter((item) => item.id !== normalizedId));
       return;
     }
 
@@ -129,13 +176,24 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     );
   };
 
-  const clear = () => setItems([]);
+  const clear = () => {
+    setItems([]);
+  };
 
-  const open = () => setIsOpen(true);
-  const close = () => setIsOpen(false);
+  const open = () => {
+    setIsOpen(true);
+  };
+
+  const close = () => {
+    setIsOpen(false);
+  };
 
   const totalUSD = useMemo(() => {
     return items.reduce((sum, item) => sum + item.price * item.qty, 0);
+  }, [items]);
+
+  const itemCount = useMemo(() => {
+    return items.reduce((sum, item) => sum + item.qty, 0);
   }, [items]);
 
   const value = useMemo<CartContextType>(
@@ -149,8 +207,9 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       close,
       isOpen,
       totalUSD,
+      itemCount,
     }),
-    [items, isOpen, totalUSD]
+    [items, isOpen, totalUSD, itemCount]
   );
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;

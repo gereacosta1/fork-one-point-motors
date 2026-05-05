@@ -6,18 +6,25 @@ export interface CardItem {
   price: number;
   qty: number;
   sku?: string;
+  image?: string;
+  imageUrl?: string;
 }
 
 type CheckoutRequestItem = {
   name: string;
   price: number;
   qty: number;
+  sku?: string;
+  image?: string;
+  imageUrl?: string;
 };
 
 type CheckoutResponse = {
   ok?: boolean;
   url?: string;
+  id?: string;
   error?: string;
+  code?: string | null;
 };
 
 const toNumber = (value: unknown): number => {
@@ -30,13 +37,20 @@ const toInt = (value: unknown, min = 1): number => {
   return Number.isFinite(num) ? Math.max(min, num) : min;
 };
 
+const cleanText = (value: unknown, fallback = ""): string => {
+  const text = String(value || fallback).trim();
+  return text;
+};
+
 async function postJson(
   url: string,
   body: Record<string, unknown>
 ): Promise<{ res: Response; data: CheckoutResponse }> {
   const res = await fetch(url, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+    },
     credentials: "same-origin",
     body: JSON.stringify(body),
   });
@@ -58,24 +72,40 @@ export async function startCardCheckout(items: CardItem[]): Promise<void> {
   }
 
   const normalized: CheckoutRequestItem[] = items
-    .map((item) => ({
-      name: String(item.name || "").trim().slice(0, 120),
-      price: toNumber(item.price),
-      qty: toInt(item.qty, 1),
-    }))
+    .map((item, index) => {
+      const name = cleanText(item.name, `Item ${index + 1}`).slice(0, 120);
+      const price = toNumber(item.price);
+      const qty = toInt(item.qty, 1);
+      const sku = cleanText(item.sku);
+      const image = cleanText(item.image);
+      const imageUrl = cleanText(item.imageUrl);
+
+      return {
+        name,
+        price,
+        qty,
+        ...(sku ? { sku } : {}),
+        ...(image ? { image } : {}),
+        ...(imageUrl ? { imageUrl } : {}),
+      };
+    })
     .filter((item) => item.name.length > 0 && item.price > 0 && item.qty > 0);
 
   if (normalized.length === 0) {
     throw new Error("no_valid_items");
   }
 
+  // Primero usamos la función directa de Netlify.
+  // Si el sitio tiene redirect /api/card-checkout en netlify.toml, también probamos ese fallback.
   const endpoints = ["/.netlify/functions/card-checkout", "/api/card-checkout"];
 
   let lastError = "card_checkout_failed";
 
   for (const url of endpoints) {
     try {
-      const { res, data } = await postJson(url, { items: normalized });
+      const { res, data } = await postJson(url, {
+        items: normalized,
+      });
 
       if (res.ok && data.ok && data.url) {
         window.location.assign(data.url);
@@ -87,14 +117,26 @@ export async function startCardCheckout(items: CardItem[]): Promise<void> {
           ? data.error
           : `status_${res.status}`;
 
-      console.error("[card-checkout] failed:", url, lastError);
+      if (data.code) {
+        lastError = `${lastError} (${data.code})`;
+      }
+
+      console.error("[card-checkout] failed:", {
+        url,
+        status: res.status,
+        error: data.error,
+        code: data.code,
+      });
     } catch (error) {
       lastError =
         error instanceof Error && error.message
           ? error.message
           : "network_error";
 
-      console.error("[card-checkout] request error:", url, error);
+      console.error("[card-checkout] request error:", {
+        url,
+        error,
+      });
     }
   }
 

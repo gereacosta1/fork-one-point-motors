@@ -1,10 +1,10 @@
-import React, { useMemo, useState } from 'react';
-import { Heart, ArrowUpRight } from 'lucide-react';
-import { Motorcycle } from '../App';
-import AffirmButton from './AffirmButton';
-import UnderlineGrow from './UnderlineGrow';
-import { useCart } from '../context/CartContext';
-import { useI18n } from '../i18n/I18nProvider';
+import React, { useMemo, useState } from "react";
+import { Heart, ArrowUpRight, ShoppingCart } from "lucide-react";
+import { Motorcycle } from "../App";
+import AffirmButton from "./AffirmButton";
+import UnderlineGrow from "./UnderlineGrow";
+import { useCart } from "../context/CartContext";
+import { useI18n } from "../i18n/I18nProvider";
 
 interface CatalogProps {
   onViewDetails: (motorcycle: Motorcycle) => void;
@@ -32,24 +32,27 @@ function SimpleToast({
   );
 }
 
+const FALLBACK_IMAGE = "/IMG/fallback.png";
+
 const FEATURE_KEY_BY_ES: Record<string, string> = {
-  'Motor eléctrico': 'feature.motor',
-  'Ligero y ágil': 'feature.lightAgile',
-  'Batería de alta capacidad': 'feature.batteryHigh',
-  'Motor eléctrico de alta potencia': 'feature.motorHighPower',
-  'Pantalla táctil': 'feature.touchscreen',
-  'Conectividad Bluetooth': 'feature.bluetooth',
-  'Sistema de navegación GPS': 'feature.gps',
-  'High-capacity battery': 'feature.batteryHigh',
-  'Light & agile': 'feature.lightAgile',
-  'Electric motor': 'feature.motor',
-  'Diseño moderno': 'feature.modernDesign',
-  'Batería de larga duración': 'feature.longBattery',
-  'Diseño ergonómico': 'feature.ergonomicDesign',
-  'ABS': 'feature.abs',
-  'Traction control': 'feature.tractionControl',
-  'Riding modes': 'feature.ridingModes',
-  'Tablero digital': 'feature.digitalDashboard',
+  "Motor eléctrico": "feature.motor",
+  "Ligero y ágil": "feature.lightAgile",
+  "Batería de alta capacidad": "feature.batteryHigh",
+  "Motor eléctrico de alta potencia": "feature.motorHighPower",
+  "Pantalla táctil": "feature.touchscreen",
+  "Conectividad Bluetooth": "feature.bluetooth",
+  "Sistema de navegación GPS": "feature.gps",
+  "High-capacity battery": "feature.batteryHigh",
+  "Light & agile": "feature.lightAgile",
+  "Electric motor": "feature.motor",
+  "Diseño moderno": "feature.modernDesign",
+  "Batería de larga duración": "feature.longBattery",
+  "Batería de alta capacity": "feature.batteryHigh",
+  "Diseño ergonómico": "feature.ergonomicDesign",
+  ABS: "feature.abs",
+  "Traction control": "feature.tractionControl",
+  "Riding modes": "feature.ridingModes",
+  "Tablero digital": "feature.digitalDashboard",
 };
 
 const translateFeature = (
@@ -60,9 +63,11 @@ const translateFeature = (
 ) => {
   const keyById = `product.${productId}.feature.${idx}`;
   const v1 = t(keyById);
+
   if (v1 !== keyById) return v1;
 
   const genericKey = FEATURE_KEY_BY_ES[featureTextES];
+
   if (genericKey) {
     const v2 = t(genericKey);
     if (v2 !== genericKey) return v2;
@@ -75,213 +80,257 @@ const Catalog: React.FC<CatalogProps> = ({ onViewDetails }) => {
   const { t, fmtMoney } = useI18n();
   const { addItem, open } = useCart();
 
-  const [filter, setFilter] = useState<'all' | 'nueva'>('all');
+  const [filter, setFilter] = useState<"all" | "nueva">("all");
   const [favorites, setFavorites] = useState<number[]>([]);
   const [toast, setToast] = useState<{ show: boolean; text: string }>({
     show: false,
-    text: '',
+    text: "",
   });
 
   const showToast = (text: string, ms = 2500) => {
     setToast({ show: true, text });
-    window.setTimeout(() => setToast({ show: false, text: '' }), ms);
+
+    window.setTimeout(() => {
+      setToast({ show: false, text: "" });
+    }, ms);
   };
 
-  const motorcycles: Motorcycle[] = [
-    {
-      id: 9001,
-      name: 'E-Bike Fat Tire (Black) — Invoice',
-      brand: 'One Point',
-      model: 'Invoice',
-      year: 2025,
-      price: 4000,
-      image: '/IMG/onepoint-ebike-black-4000.jpeg',
-      condition: 'Nueva',
-      engine: 'Electric',
-      featured: true,
-      description: 'Invoice payment item. Financing available.',
-      features: ['Electric motor', 'High-capacity battery', 'Light & agile'],
-    },
-    {
-      id: 9002,
-      name: 'E-Bike (Red) — Invoice',
-      brand: 'One Point',
-      model: 'Invoice',
-      year: 2025,
-      price: 2800,
-      image: '/IMG/onepoint-ebike-red-2800.jpeg',
-      condition: 'Nueva',
-      engine: 'Electric',
-      featured: true,
-      description: 'Invoice payment item. Financing available.',
-      features: ['Electric motor', 'Light & agile', 'High-capacity battery'],
-    },
-    {
-      id: 9003,
-      name: 'Electric Scooter (RGB) — Invoice',
-      brand: 'One Point',
-      model: 'Invoice',
-      year: 2025,
-      price: 500,
-      image: '/IMG/onepoint-scooter-rgb-500.jpeg',
-      condition: 'Nueva',
-      engine: 'Electric',
-      featured: true,
-      description: 'Invoice payment item. Financing available.',
-      features: ['Electric motor', 'Light & agile'],
-    },
-    {
-      id: 5001,
-      name: 'Electric Cargo Tricycle',
-      brand: 'MZ',
-      model: 'E-Cargo',
-      year: 2025,
-      price: 5000,
-      image: '/IMG/triciclo-rojo.jpeg',
-      condition: 'Nueva',
-      engine: 'Electric',
-      featured: true,
-      description:
-        'Robust electric cargo tricycle ideal for deliveries and utility tasks. Durable chassis, large rear cargo bed, weather canopy and comfortable seating. Financing available.',
-      features: ['Motor eléctrico', 'Ligero y ágil', 'Batería de alta capacidad'],
-      gallery: [
-        '/IMG/triciclo-rojo.jpeg',
-        '/IMG/triciclo-rojo2.jpeg',
-        '/IMG/triciclo-rojo3.jpeg',
-      ],
-    },
-    {
-      id: 5,
-      name: 'Electric Scooter',
-      brand: 'Scooter',
-      model: 'Electric Scooter',
-      year: 2025,
-      price: 1500,
-      image: '/IMG/Scooter-electrico(1).jpeg',
-      condition: 'Nueva',
-      engine: 'Electric',
-      description:
-        'Italian excellence in an electric scooter. Power, style and exclusivity in one vehicle.',
-      features: ['Motor eléctrico', 'Ligero y ágil', 'Batería de alta capacidad'],
-    },
-    {
-      id: 8,
-      name: 'Electric Scooter 2025',
-      brand: 'Master Sonic',
-      model: 'Electric Scooter',
-      year: 2025,
-      price: 1750,
-      image: '/IMG/scooter-nuevo.webp',
-      condition: 'Nueva',
-      engine: 'Electric',
-      description: 'Compact, efficient and comfortable for everyday urban mobility.',
-      features: ['ABS', 'Traction control', 'Riding modes'],
-    },
-    {
-      id: 11,
-      name: 'Electric Bike Pro',
-      brand: 'E-Bike',
-      model: 'EBike Pro 2025',
-      year: 2025,
-      price: 1000,
-      image: '/IMG/electricBike2.jpeg',
-      condition: 'Nueva',
-      engine: 'Electric',
-      featured: true,
-      description: 'High-performance e-bike, ideal for city and long rides.',
-      features: ['Motor eléctrico', 'Batería de alta capacidad', 'Tablero digital'],
-    },
-    {
-      id: 12,
-      name: 'Urban Electric Bike',
-      brand: 'E-Bike',
-      model: 'Scooter Urban 2025',
-      year: 2025,
-      price: 1000,
-      image: '/IMG/electricBike3.jpeg',
-      condition: 'Nueva',
-      engine: 'Electric',
-      featured: true,
-      description: 'Urban electric bike, comfortable and efficient for daily use.',
-      features: ['Motor eléctrico', 'Ligero y ágil', 'Batería de alta capacidad'],
-    },
-    {
-      id: 16,
-      name: 'Premium Electric Bicycle',
-      brand: 'Universal',
-      model: 'Scooter Premium 2025',
-      year: 2025,
-      price: 3500,
-      image: '/IMG/bici-electric-negra.jpeg',
-      condition: 'Nueva',
-      engine: 'Electric',
-      featured: true,
-      description:
-        'Premium electric bicycle, ideal for long trips and comfortable commuting.',
-      features: ['Motor eléctrico', 'Batería de alta capacidad', 'Diseño ergonómico'],
-    },
-    {
-      id: 17,
-      name: 'Amazta Electric Scooter',
-      brand: 'Amazta',
-      model: 'Amazta 2025',
-      year: 2025,
-      price: 2500,
-      image: '/IMG/scooter-nuevo2.webp',
-      condition: 'Nueva',
-      engine: 'Electric',
-      featured: true,
-      description: 'Perfect blend of style and technology. Ideal for urban commuting.',
-      features: ['Motor eléctrico', 'Diseño moderno', 'Batería de larga duración'],
-    },
-    {
-      id: 18,
-      name: 'Movelito Electric Scooter',
-      brand: 'Movelito',
-      model: 'Movelito 2025',
-      year: 2025,
-      price: 1850,
-      image: '/IMG/scooter-nuevo3.webp',
-      condition: 'Nueva',
-      engine: 'Electric',
-      featured: true,
-      description:
-        'Compact and efficient scooter. Perfect for the city with an attractive design.',
-      features: ['Motor eléctrico', 'Ligero y ágil', 'Batería de alta capacity'],
-    },
-    {
-      id: 19,
-      name: 'Galaxy Premium Electric Scooter',
-      brand: 'Galaxy',
-      model: 'Premium 2025',
-      year: 2025,
-      price: 2000,
-      image: '/IMG/scooter-nuevo4.webp',
-      condition: 'Nueva',
-      engine: 'Electric',
-      featured: true,
-      description:
-        'Latest innovation in urban mobility with futuristic design and advanced tech.',
-      features: [
-        'Motor eléctrico de alta potencia',
-        'Pantalla táctil',
-        'Conectividad Bluetooth',
-        'Sistema de navegación GPS',
-      ],
-    },
-  ];
+  const handleImageError = (event: React.SyntheticEvent<HTMLImageElement>) => {
+    const target = event.currentTarget;
 
-  const onlyElectric = useMemo(
-    () => motorcycles.filter((m) => m.engine && m.engine.toLowerCase() === 'electric'),
-    [motorcycles]
+    if (!target.src.includes("fallback")) {
+      target.src = FALLBACK_IMAGE;
+    }
+  };
+
+  const motorcycles: Motorcycle[] = useMemo(
+    () => [
+      {
+        id: 9001,
+        name: "E-Bike Fat Tire (Black) — Invoice",
+        brand: "One Point",
+        model: "Invoice",
+        year: 2025,
+        price: 4000,
+        image: "/IMG/onepoint-ebike-black-4000.jpeg",
+        condition: "Nueva",
+        engine: "Electric",
+        featured: true,
+        description: "Invoice payment item. Financing available.",
+        features: ["Electric motor", "High-capacity battery", "Light & agile"],
+      },
+      {
+        id: 9002,
+        name: "E-Bike (Red) — Invoice",
+        brand: "One Point",
+        model: "Invoice",
+        year: 2025,
+        price: 2800,
+        image: "/IMG/onepoint-ebike-red-2800.jpeg",
+        condition: "Nueva",
+        engine: "Electric",
+        featured: true,
+        description: "Invoice payment item. Financing available.",
+        features: ["Electric motor", "Light & agile", "High-capacity battery"],
+      },
+      {
+        id: 9003,
+        name: "Electric Scooter (RGB) — Invoice",
+        brand: "One Point",
+        model: "Invoice",
+        year: 2025,
+        price: 500,
+        image: "/IMG/onepoint-scooter-rgb-500.jpeg",
+        condition: "Nueva",
+        engine: "Electric",
+        featured: true,
+        description: "Invoice payment item. Financing available.",
+        features: ["Electric motor", "Light & agile"],
+      },
+      {
+        id: 5001,
+        name: "Electric Cargo Tricycle",
+        brand: "MZ",
+        model: "E-Cargo",
+        year: 2025,
+        price: 5000,
+        image: "/IMG/triciclo-rojo.jpeg",
+        condition: "Nueva",
+        engine: "Electric",
+        featured: true,
+        description:
+          "Robust electric cargo tricycle ideal for deliveries and utility tasks. Durable chassis, large rear cargo bed, weather canopy and comfortable seating. Financing available.",
+        features: [
+          "Motor eléctrico",
+          "Ligero y ágil",
+          "Batería de alta capacidad",
+        ],
+        gallery: [
+          "/IMG/triciclo-rojo.jpeg",
+          "/IMG/triciclo-rojo2.jpeg",
+          "/IMG/triciclo-rojo3.jpeg",
+        ],
+      },
+      {
+        id: 5,
+        name: "Electric Scooter",
+        brand: "Scooter",
+        model: "Electric Scooter",
+        year: 2025,
+        price: 1500,
+        image: "/IMG/Scooter-electrico(1).jpeg",
+        condition: "Nueva",
+        engine: "Electric",
+        description:
+          "Italian excellence in an electric scooter. Power, style and exclusivity in one vehicle.",
+        features: [
+          "Motor eléctrico",
+          "Ligero y ágil",
+          "Batería de alta capacidad",
+        ],
+      },
+      {
+        id: 8,
+        name: "Electric Scooter 2025",
+        brand: "Master Sonic",
+        model: "Electric Scooter",
+        year: 2025,
+        price: 1750,
+        image: "/IMG/scooter-nuevo.webp",
+        condition: "Nueva",
+        engine: "Electric",
+        description:
+          "Compact, efficient and comfortable for everyday urban mobility.",
+        features: ["ABS", "Traction control", "Riding modes"],
+      },
+      {
+        id: 11,
+        name: "Electric Bike Pro",
+        brand: "E-Bike",
+        model: "EBike Pro 2025",
+        year: 2025,
+        price: 1000,
+        image: "/IMG/electricBike2.jpeg",
+        condition: "Nueva",
+        engine: "Electric",
+        featured: true,
+        description: "High-performance e-bike, ideal for city and long rides.",
+        features: [
+          "Motor eléctrico",
+          "Batería de alta capacidad",
+          "Tablero digital",
+        ],
+      },
+      {
+        id: 12,
+        name: "Urban Electric Bike",
+        brand: "E-Bike",
+        model: "Scooter Urban 2025",
+        year: 2025,
+        price: 1000,
+        image: "/IMG/electricBike3.jpeg",
+        condition: "Nueva",
+        engine: "Electric",
+        featured: true,
+        description:
+          "Urban electric bike, comfortable and efficient for daily use.",
+        features: [
+          "Motor eléctrico",
+          "Ligero y ágil",
+          "Batería de alta capacidad",
+        ],
+      },
+      {
+        id: 16,
+        name: "Premium Electric Bicycle",
+        brand: "Universal",
+        model: "Scooter Premium 2025",
+        year: 2025,
+        price: 3500,
+        image: "/IMG/bici-electric-negra.jpeg",
+        condition: "Nueva",
+        engine: "Electric",
+        featured: true,
+        description:
+          "Premium electric bicycle, ideal for long trips and comfortable commuting.",
+        features: [
+          "Motor eléctrico",
+          "Batería de alta capacidad",
+          "Diseño ergonómico",
+        ],
+      },
+      {
+        id: 17,
+        name: "Amazta Electric Scooter",
+        brand: "Amazta",
+        model: "Amazta 2025",
+        year: 2025,
+        price: 2500,
+        image: "/IMG/scooter-nuevo2.webp",
+        condition: "Nueva",
+        engine: "Electric",
+        featured: true,
+        description:
+          "Perfect blend of style and technology. Ideal for urban commuting.",
+        features: [
+          "Motor eléctrico",
+          "Diseño moderno",
+          "Batería de larga duración",
+        ],
+      },
+      {
+        id: 18,
+        name: "Movelito Electric Scooter",
+        brand: "Movelito",
+        model: "Movelito 2025",
+        year: 2025,
+        price: 1850,
+        image: "/IMG/scooter-nuevo3.webp",
+        condition: "Nueva",
+        engine: "Electric",
+        featured: true,
+        description:
+          "Compact and efficient scooter. Perfect for the city with an attractive design.",
+        features: [
+          "Motor eléctrico",
+          "Ligero y ágil",
+          "Batería de alta capacidad",
+        ],
+      },
+      {
+        id: 19,
+        name: "Galaxy Premium Electric Scooter",
+        brand: "Galaxy",
+        model: "Premium 2025",
+        year: 2025,
+        price: 2000,
+        image: "/IMG/scooter-nuevo4.webp",
+        condition: "Nueva",
+        engine: "Electric",
+        featured: true,
+        description:
+          "Latest innovation in urban mobility with futuristic design and advanced tech.",
+        features: [
+          "Motor eléctrico de alta potencia",
+          "Pantalla táctil",
+          "Conectividad Bluetooth",
+          "Sistema de navegación GPS",
+        ],
+      },
+    ],
+    []
   );
 
   const filteredMotorcycles = useMemo(() => {
-    return onlyElectric.filter((moto) => {
-      if (filter === 'all') return true;
+    return motorcycles.filter((moto) => {
+      const isElectric = moto.engine?.toLowerCase() === "electric";
+
+      if (!isElectric) return false;
+      if (filter === "all") return true;
+
       return moto.condition.toLowerCase() === filter;
     });
-  }, [onlyElectric, filter]);
+  }, [motorcycles, filter]);
 
   const toggleFavorite = (id: number) => {
     setFavorites((prev) =>
@@ -289,8 +338,27 @@ const Catalog: React.FC<CatalogProps> = ({ onViewDetails }) => {
     );
   };
 
+  const handleAddToCart = (moto: Motorcycle, priceNum: number) => {
+    addItem({
+      id: String(moto.id),
+      name: moto.name,
+      price: priceNum,
+      qty: 1,
+      sku: String(moto.id),
+      image: moto.image,
+      imageUrl: moto.image,
+      url: window.location.href,
+    });
+
+    open();
+    showToast(`${moto.name} added to cart`);
+  };
+
   return (
-    <section id="catalogo" className="relative overflow-hidden bg-[#0b0b0c] py-24 md:py-32">
+    <section
+      id="catalogo"
+      className="relative overflow-hidden bg-[#0b0b0c] py-24 md:py-32"
+    >
       <div className="absolute inset-0 opacity-[0.05]">
         <div className="h-full w-full bg-[radial-gradient(circle_at_top_left,#39ff14,transparent_22%),radial-gradient(circle_at_bottom_right,#ffffff,transparent_18%)]" />
       </div>
@@ -303,30 +371,37 @@ const Catalog: React.FC<CatalogProps> = ({ onViewDetails }) => {
             </p>
 
             <h2 className="mb-5 text-4xl font-black leading-none text-white md:text-6xl xl:text-7xl">
-              <UnderlineGrow>{t('catalog.title')}</UnderlineGrow>
+              <UnderlineGrow>{t("catalog.title")}</UnderlineGrow>
             </h2>
 
             <p className="max-w-2xl text-lg font-medium leading-relaxed text-white/58 md:text-xl">
-              {t('catalog.subtitle')}
+              {t("catalog.subtitle")}
             </p>
           </div>
 
           <div className="inline-flex w-fit rounded-full border border-white/10 bg-white/[0.03] p-1.5 shadow-2xl backdrop-blur-xl">
             <button
-              onClick={() => setFilter('all')}
+              type="button"
+              onClick={() => setFilter("all")}
               className={`rounded-full px-5 py-2.5 text-sm font-extrabold transition ${
-                filter === 'all' ? 'bg-white text-black' : 'text-white/65 hover:text-white'
+                filter === "all"
+                  ? "bg-white text-black"
+                  : "text-white/65 hover:text-white"
               }`}
             >
-              {t('catalog.filter.all')}
+              {t("catalog.filter.all")}
             </button>
+
             <button
-              onClick={() => setFilter('nueva')}
+              type="button"
+              onClick={() => setFilter("nueva")}
               className={`rounded-full px-5 py-2.5 text-sm font-extrabold transition ${
-                filter === 'nueva' ? 'bg-white text-black' : 'text-white/65 hover:text-white'
+                filter === "nueva"
+                  ? "bg-white text-black"
+                  : "text-white/65 hover:text-white"
               }`}
             >
-              {t('catalog.filter.new')}
+              {t("catalog.filter.new")}
             </button>
           </div>
         </div>
@@ -340,16 +415,19 @@ const Catalog: React.FC<CatalogProps> = ({ onViewDetails }) => {
         <div className="flex flex-col gap-8">
           {filteredMotorcycles.map((moto, index) => {
             const condLabel =
-              moto.condition === 'Nueva'
-                ? t('product.condition.new')
-                : t('product.condition.used');
+              moto.condition === "Nueva"
+                ? t("product.condition.new")
+                : t("product.condition.used");
 
             const priceNum = Number(moto.price);
             const isPriceValid = Number.isFinite(priceNum) && priceNum > 0;
 
             const features = moto.features || [];
             const shownFeatures = features.slice(0, 3);
-            const extraCount = Math.max(0, features.length - shownFeatures.length);
+            const extraCount = Math.max(
+              0,
+              features.length - shownFeatures.length
+            );
 
             return (
               <article
@@ -361,7 +439,7 @@ const Catalog: React.FC<CatalogProps> = ({ onViewDetails }) => {
                     <div>
                       <div className="mb-5 flex flex-wrap items-center gap-3">
                         <span className="rounded-full border border-white/10 bg-white/[0.03] px-3 py-1 text-[10px] font-extrabold uppercase tracking-[0.24em] text-white/70">
-                          {moto.featured ? 'Featured' : condLabel}
+                          {moto.featured ? "Featured" : condLabel}
                         </span>
 
                         <span className="text-[10px] font-bold uppercase tracking-[0.24em] text-white/35">
@@ -391,7 +469,11 @@ const Catalog: React.FC<CatalogProps> = ({ onViewDetails }) => {
 
                       <div className="mt-6 flex flex-wrap gap-x-5 gap-y-2 text-[11px] font-bold uppercase tracking-[0.18em] text-white/34">
                         <span>{moto.engine}</span>
-                        <span>{moto.mileage ? `${moto.mileage.toLocaleString()} km` : 'In stock'}</span>
+                        <span>
+                          {moto.mileage
+                            ? `${moto.mileage.toLocaleString()} km`
+                            : "In stock"}
+                        </span>
                         <span>{condLabel}</span>
                       </div>
 
@@ -399,6 +481,7 @@ const Catalog: React.FC<CatalogProps> = ({ onViewDetails }) => {
                         <div className="mt-5 flex flex-wrap gap-2">
                           {shownFeatures.map((f, idx) => {
                             const label = translateFeature(t, moto.id, f, idx);
+
                             return (
                               <span
                                 key={`${moto.id}-feature-${idx}`}
@@ -408,6 +491,7 @@ const Catalog: React.FC<CatalogProps> = ({ onViewDetails }) => {
                               </span>
                             );
                           })}
+
                           {extraCount > 0 && (
                             <span className="rounded-full border border-white/8 bg-white/[0.03] px-3 py-1.5 text-xs font-medium text-white/62">
                               +{extraCount}
@@ -423,18 +507,20 @@ const Catalog: React.FC<CatalogProps> = ({ onViewDetails }) => {
                           <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-white/35">
                             Price
                           </p>
+
                           <p className="mt-2 text-2xl font-black text-white">
-                            {isPriceValid ? fmtMoney(priceNum) : '—'}
+                            {isPriceValid ? fmtMoney(priceNum) : "—"}
                           </p>
                         </div>
 
                         <button
+                          type="button"
                           onClick={() => onViewDetails(moto)}
                           className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.2em] text-white/46 transition hover:text-white"
-                          aria-label={`${t('product.viewDetails')} ${moto.name}`}
-                          title={t('product.viewDetails')}
+                          aria-label={`${t("product.viewDetails")} ${moto.name}`}
+                          title={t("product.viewDetails")}
                         >
-                          {t('product.viewDetails')}
+                          {t("product.viewDetails")}
                           <ArrowUpRight className="h-4 w-4 text-brand" />
                         </button>
                       </div>
@@ -444,30 +530,24 @@ const Catalog: React.FC<CatalogProps> = ({ onViewDetails }) => {
                           type="button"
                           onClick={() => {
                             if (!isPriceValid) return;
-                            addItem({
-                              id: String(moto.id),
-                              name: moto.name,
-                              price: priceNum,
-                              qty: 1,
-                              sku: String(moto.id),
-                              image: moto.image,
-                              url: window.location.href,
-                            });
-                            open();
+                            handleAddToCart(moto, priceNum);
                           }}
-                          className="inline-flex h-[56px] items-center justify-center rounded-full border border-white/12 bg-white px-6 text-sm font-extrabold text-black transition hover:bg-brand"
+                          disabled={!isPriceValid}
+                          className="inline-flex h-[56px] items-center justify-center gap-2 rounded-full border border-white/12 bg-white px-6 text-sm font-extrabold text-black transition hover:bg-brand disabled:cursor-not-allowed disabled:opacity-50"
                         >
-                          {t('cart.add')}
+                          <ShoppingCart className="h-4 w-4" />
+                          {t("cart.add")}
                         </button>
 
                         <div className="h-[56px]">
                           {!isPriceValid ? (
                             <button
+                              type="button"
                               disabled
-                              title={t('product.price.toConfirm')}
+                              title={t("product.price.toConfirm")}
                               className="h-full w-full cursor-not-allowed rounded-full border border-white/12 bg-white/[0.03] px-4 text-sm font-extrabold text-white/42"
                             >
-                              {t('product.price.toConfirm')}
+                              {t("product.price.toConfirm")}
                             </button>
                           ) : (
                             <div className="h-full w-full">
@@ -478,6 +558,7 @@ const Catalog: React.FC<CatalogProps> = ({ onViewDetails }) => {
                                     price: priceNum,
                                     qty: 1,
                                     sku: String(moto.id),
+                                    image: moto.image,
                                     url: window.location.href,
                                   },
                                 ]}
@@ -498,29 +579,31 @@ const Catalog: React.FC<CatalogProps> = ({ onViewDetails }) => {
                       onClick={() => toggleFavorite(moto.id)}
                       className="absolute right-5 top-5 z-20 rounded-full border border-white/10 bg-black/25 p-2.5 opacity-70 backdrop-blur-xl transition hover:opacity-100"
                       aria-label={
-                        favorites.includes(moto.id) ? t('favorites.remove') : t('favorites.add')
+                        favorites.includes(moto.id)
+                          ? t("favorites.remove")
+                          : t("favorites.add")
                       }
                       title={
-                        favorites.includes(moto.id) ? t('favorites.remove') : t('favorites.add')
+                        favorites.includes(moto.id)
+                          ? t("favorites.remove")
+                          : t("favorites.add")
                       }
                     >
                       <Heart
                         className="h-5 w-5"
-                        color={favorites.includes(moto.id) ? '#39ff14' : '#ffffff'}
-                        fill={favorites.includes(moto.id) ? '#39ff14' : 'none'}
+                        color={
+                          favorites.includes(moto.id) ? "#39ff14" : "#ffffff"
+                        }
+                        fill={favorites.includes(moto.id) ? "#39ff14" : "none"}
                       />
                     </button>
 
                     <img
-                      src={moto.image || '/fallback.png'}
-                      alt={moto.name || t('image.altFallback')}
+                      src={moto.image || FALLBACK_IMAGE}
+                      alt={moto.name || t("image.altFallback")}
                       className="relative z-10 h-[260px] w-full object-contain transition duration-500 group-hover:scale-[1.03] md:h-[320px]"
                       loading="lazy"
-                      onError={(e) => {
-                        const target = e.currentTarget as HTMLImageElement;
-                        if (target.src.endsWith('/fallback.png')) return;
-                        target.src = '/fallback.png';
-                      }}
+                      onError={handleImageError}
                     />
                   </div>
                 </div>
@@ -531,10 +614,11 @@ const Catalog: React.FC<CatalogProps> = ({ onViewDetails }) => {
 
         <div className="mt-16 text-center">
           <button
-            onClick={() => showToast(t('catalog.toast.moreSoon'))}
+            type="button"
+            onClick={() => showToast(t("catalog.toast.moreSoon"))}
             className="rounded-full border border-white/12 bg-white/[0.04] px-8 py-4 text-sm font-extrabold uppercase tracking-[0.18em] text-white transition hover:bg-white/[0.08]"
           >
-            {t('catalog.cta.moreBikes')}
+            {t("catalog.cta.moreBikes")}
           </button>
         </div>
       </div>
@@ -542,7 +626,7 @@ const Catalog: React.FC<CatalogProps> = ({ onViewDetails }) => {
       <SimpleToast
         show={toast.show}
         text={toast.text}
-        onClose={() => setToast({ show: false, text: '' })}
+        onClose={() => setToast({ show: false, text: "" })}
       />
     </section>
   );
